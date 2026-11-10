@@ -38,7 +38,7 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends \
-            build-essential clang fakeroot dpkg-dev \
+            build-essential clang fakeroot dpkg-dev git-lfs \
             unzip curl ca-certificates
 
       # ------------------------------------------------------------
@@ -83,12 +83,16 @@ jobs:
           set -e
           sudo mkdir -p "$THEOS/sdks"
           sudo chown -R "$USER" "$THEOS/sdks"
-          # prefer the pinned SDK version, fall back to a slightly newer one
-          for v in "$SDK_VERSION" "15.0" "16.0"; do
-            echo "::group::Trying iPhoneOS${v}.sdk ..."
-            if curl -fL --retry 2 -o /tmp/iphoneos.sdk.zip \
-                "https://github.com/xybp888/iOS-SDKs/raw/master/iPhoneOS${v}.sdk.zip"; then
-              unzip -q /tmp/iphoneos.sdk.zip -d "$THEOS/sdks"
+          # xybp888/iOS-SDKs keeps each SDK as a directory tracked with
+          # Git LFS — a partial sparse clone fetches only the version we need.
+          git lfs install --skip-repo
+          git clone --depth 1 --filter=blob:none --sparse \
+            https://github.com/xybp888/iOS-SDKs.git /tmp/ios-sdks
+          for v in "$SDK_VERSION" "15.2" "16.0"; do
+            echo "::group::Checking out iPhoneOS${v}.sdk ..."
+            if git -C /tmp/ios-sdks sparse-checkout set "iPhoneOS${v}.sdk" 2>/dev/null && \
+               [ -d "/tmp/ios-sdks/iPhoneOS${v}.sdk/System" ]; then
+              cp -R "/tmp/ios-sdks/iPhoneOS${v}.sdk" "$THEOS/sdks/"
               echo "iOS ${v} SDK installed."
               echo "::endgroup::"
               break
