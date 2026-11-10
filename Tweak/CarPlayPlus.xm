@@ -24,7 +24,23 @@
 #import <mach/mach.h>
 #import <dlfcn.h>
 #import <notify.h>
+#if __has_include(<IOKit/IOKitLib.h>)
 #import <IOKit/IOKitLib.h>
+#else
+// Some stripped iOS SDKs ship IOKit.framework (linkable .tbd) without headers.
+// Declare the few symbols used for battery info instead.
+#include <CoreFoundation/CoreFoundation.h>
+typedef unsigned int io_object_t;
+typedef io_object_t io_registry_entry_t;
+typedef io_object_t io_service_t;
+extern "C" {
+CFMutableDictionaryRef IOServiceMatching(const char *name);
+io_service_t IOServiceGetMatchingService(mach_port_t mainPort, CFDictionaryRef matching);
+kern_return_t IORegistryEntryCreateCFProperties(io_registry_entry_t entry, CFMutableDictionaryRef *properties, CFAllocatorRef allocator, uint32_t options);
+kern_return_t IOObjectRelease(io_object_t object);
+}
+#define kIOMasterPortDefault 0
+#endif
 #import <SystemConfiguration/CaptiveNetwork.h>
 
 #import <substrate.h>
