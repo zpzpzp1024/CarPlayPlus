@@ -1,9 +1,16 @@
 # CarPlayPlus — GitHub Actions build workflow.
 #
-# Runs on Ubuntu (GitHub-hosted) with a full Theos toolchain:
+# Dopamine (arm64e rootless) loads PreferenceBundles from an arm64e-only
+# context, so the package must contain an arm64e slice. Building arm64e
+# requires Apple's toolchain, so this workflow runs on a macOS runner
+# (Xcode + ld64). The iOS 14.5 SDK is fetched from xybp888/iOS-SDKs with
+# a sparse, blob=none clone (same trick as the old Ubuntu job), and the
+# local private-header/stub files kept the build self-contained.
+#
 #   1. clone Theos (+ submodules)
-#   2. install the iOS 14.5 SDK (used for iphone:clang:14.5:14.0)
-#   3. `make package FINALPACKAGE=1` produces the .deb
+#   2. install the iOS 14.5 SDK
+#   3. `make package FINALPACKAGE=1 ARCHS="arm64 arm64e"` -> fat .deb
+#      (rootless scheme: /var/jb layout, iphoneos-arm64 architecture)
 #   4. artifacts are uploaded; pushing a `v*` tag publishes a GitHub Release
 
 name: Build CarPlayPlus
@@ -21,77 +28,31 @@ permissions:
   contents: write
 
 env:
-  THEOS: /opt/theos
+  THEOS: ${{ runner.temp }}/theos
   SDK_VERSION: "14.5"
-  # lld (used on Linux) has no arm64e backend; build the arm64 slice only.
-  ARCHS: arm64
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       # ------------------------------------------------------------
-      # Host toolchain
-      # ------------------------------------------------------------
-      - name: Install host dependencies
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends \
-            build-essential clang lld llvm fakeroot dpkg-dev git-lfs \
-            unzip curl ca-certificates
-
-      # ------------------------------------------------------------
-      # Theos
+      # Theos (macOS native; Xcode supplies clang/ld64 which support
+      # both arm64 and arm64e slices natively)
       # ------------------------------------------------------------
       - name: Install Theos
         run: |
-          sudo mkdir -p "$THEOS"
-          sudo chown -R "$USER" "$THEOS"
           git clone --depth 1 --recurse-submodules --shallow-submodules \
             https://github.com/theos/theos.git "$THEOS"
 
-      - name: Install ldid (prebuilt)
-        id: ldid
-        continue-on-error: true
+      - name: Install packaging tools (ldid, dpkg)
         run: |
-          curl -fL --retry 3 -o "$THEOS/bin/ldid" \
-            "https://github.com/ProcursusTeam/ldid/releases/download/v2.1.5-procursus7/ldid_linux_x86_64"
+          brew install ldid dpkg
+          mkdir -p "$THEOS/bin"
+          cp "$(command -v ldid)" "$THEOS/bin/ldid"
           chmod +x "$THEOS/bin/ldid"
-
-      - name: Build ldid from source (fallback)
-        if: steps.ldid.outcome == 'failure'
-        run: |
-          git clone --depth 1 https://github.com/theos/ldid.git /tmp/ldid-src
-          make -C /tmp/ldid-src -j2
-          cp /tmp/ldid-src/ldid "$THEOS/bin/ldid"
-          chmod 755 "$THEOS/bin/ldid"
-
-      # On Linux, Theos expects its (fake) toolchain at
-      # $THEOS/toolchain/linux/iphone/bin, pointing at host clang and lld.
-      # clang drives the link itself and picks ld64.lld for Mach-O targets.
-      - name: Create fake toolchain
-        run: |
-          set -e
-          TC="$THEOS/toolchain/linux/iphone/bin"
-          sudo mkdir -p "$TC"
-          sudo ln -sf "$(command -v clang)" "$TC/clang"
-          sudo ln -sf "$(command -v clang++)" "$TC/clang++"
-          for t in ar nm ranlib strip strings; do
-            if [ -x "/usr/bin/llvm-$t" ]; then
-              sudo ln -sf "/usr/bin/llvm-$t" "$TC/$t"
-            elif [ -x "/usr/bin/$t" ]; then
-              sudo ln -sf "/usr/bin/$t" "$TC/$t"
-            fi
-          done
-          [ -x /usr/bin/ld64.lld ] && sudo ln -sf /usr/bin/ld64.lld "$TC/ld64.lld"
-          [ -x /usr/bin/ld.lld ] && sudo ln -sf /usr/bin/ld.lld "$TC/ld"
-          # clang drives links with the system `ld` by default; point it at
-          # ld64.lld so Mach-O linking works (GNU ld.bfd cannot link iOS targets).
-          sudo ln -sf /usr/bin/ld64.lld /usr/bin/ld
-          ls -la "$TC"
 
       # ------------------------------------------------------------
       # iOS SDK (cached across runs)
@@ -101,16 +62,13 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ env.THEOS }}/sdks/iPhoneOS${{ env.SDK_VERSION }}.sdk
-          key: theos-sdk-${{ env.SDK_VERSION }}
+          key: theos-sdk-macos-${{ env.SDK_VERSION }}
 
       - name: Download iOS SDK
         if: steps.sdk-cache.outputs.cache-hit != 'true'
         run: |
           set -e
-          sudo mkdir -p "$THEOS/sdks"
-          sudo chown -R "$USER" "$THEOS/sdks"
-          # xybp888/iOS-SDKs keeps each SDK as a directory tracked with
-          # Git LFS — a partial sparse clone fetches only the version we need.
+          mkdir -p "$THEOS/sdks"
           git lfs install --skip-repo
           git clone --depth 1 --filter=blob:none --sparse \
             https://github.com/xybp888/iOS-SDKs.git /tmp/ios-sdks
@@ -137,11 +95,36 @@ jobs:
 
       - name: Build package
         run: |
-          make clean package FINALPACKAGE=1 ARCHS=arm64
+          make clean package FINALPACKAGE=1 ARCHS="arm64 arm64e"
 
       - name: List packages
         run: |
           find . -name '*.deb' -exec ls -lh {} \;
+
+      - name: Verify binary architectures
+        run: |
+          DEB=$(find . -name '*.deb' | head -1)
+          echo "=== $DEB ==="
+          mkdir -p /tmp/debx
+          tar -xf "$DEB" -C /tmp/debx
+          python3 - <<'PY'
+import glob, lzma, tarfile, io
+p = glob.glob('/tmp/debx/data.tar.*')[0]
+t = tarfile.open(fileobj=io.BytesIO(lzma.decompress(open(p,'rb').read())))
+for m in t.getmembers():
+    if m.isfile():
+        print(m.name)
+PY
+          echo "=== bundles ==="
+          python3 - <<'PY'
+import glob, lzma, tarfile, io, os
+p = glob.glob('/tmp/debx/data.tar.*')[0]
+t = tarfile.open(fileobj=io.BytesIO(lzma.decompress(open(p,'rb').read())))
+t.extractall('/tmp/debx/data')
+PY
+          for f in $(find /tmp/debx/data -type f \( -name 'CarPlayPlus*' -o -name 'dylib' \) ! -name '*.plist'); do
+            file "$f"
+          done
 
       - name: Upload .deb artifacts
         uses: actions/upload-artifact@v4
