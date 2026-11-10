@@ -204,7 +204,7 @@ static NSDictionary *CPBatteryInfo(void) {
 }
 
 static int CPBatteryPercent(void) {
-    static Class bcClass = Nil;
+    static id bcClass = nil;
     static dispatch_once_t once;
     dispatch_once(&once, ^{ bcClass = NSClassFromString(@"BCBatteryDeviceController"); });
     if (bcClass && [bcClass respondsToSelector:@selector(sharedInstance)]) {
@@ -326,7 +326,7 @@ static NSString *const kFullscreenToggle  = @"xyz.carplayplus.fullscreen";
     CGFloat left = cgPref(kLeft_inset, 20);
     CGFloat right = cgPref(kRight_inset, 20);
     if ([UIView userInterfaceLayoutDirectionForSemanticContentAttribute:self.semanticContentAttribute]
-            == NSLayoutDirectionRightToLeft) {
+            == UIUserInterfaceLayoutDirectionRightToLeft) {
         CGFloat t = left; left = right; right = t;
     }
     UIEdgeInsets insets = UIEdgeInsetsMake(top, left, bottom, right);
@@ -336,7 +336,7 @@ static NSString *const kFullscreenToggle  = @"xyz.carplayplus.fullscreen";
         [self setValue:[NSValue valueWithUIEdgeInsets:insets] forKey:@"contentInset"];
 
     if ([self respondsToSelector:@selector(iconViews)])
-        for (UIView *iv in self.iconViews)
+        for (id iv in self.iconViews)
             if ([iv respondsToSelector:@selector(setIconSize:)])
                 [iv setIconSize:(CGFloat)iconSize];
 }
@@ -353,7 +353,7 @@ static NSString *const kFullscreenToggle  = @"xyz.carplayplus.fullscreen";
 %end
 
 // apply label options to icon views (called from layout below)
-static void ApplyLabelStyleToIconView(UIView *iconView) {
+static void ApplyLabelStyleToIconView(id iconView) {
     if (boolPref(kHideLabel, YES)) {
         for (UIView *sub in iconView.subviews)
             sub.hidden = YES;
@@ -969,7 +969,7 @@ static void OnPrefsChanged(NSNotification *note) {
         kAPI_CarPlay: @YES, kAPI_Statusbar: @YES,
         kFull_size: @30, kFullBtn_x: @14, kFullBtn_y: @14,
         kRemoveSplash: @NO,
-    }];
+    });
 
     // BKS screen-blank hook
     void *bks = dlopen("/System/Library/PrivateFrameworks/BackBoardServices.framework/BackBoardServices", RTLD_NOW);
@@ -987,8 +987,10 @@ static void OnPrefsChanged(NSNotification *note) {
     %init(CarPlayPlusWidgets);
 
     NSNotificationCenter *nc = [NSNotificationCenter defaultCenter];
-    [nc addObserverForName:@"CarPlayIsConnectedDidChange" object:nil queue:nil usingBlock:OnCarPlayConnect];
-    [nc addObserverForName:kIconLayoutChanged object:nil queue:nil usingBlock:OnIconLayoutChanged];
+    [nc addObserverForName:@"CarPlayIsConnectedDidChange" object:nil queue:nil
+          usingBlock:^(NSNotification *note) { OnCarPlayConnect(note); }];
+    [nc addObserverForName:kIconLayoutChanged object:nil queue:nil
+          usingBlock:^(NSNotification *note) { OnIconLayoutChanged(note); }];
     [nc addObserverForName:kChangedImg object:nil queue:nil usingBlock:^(NSNotification *note) {
         UIWindow *w = [UIApplication sharedApplication].keyWindow;
         if (w) [[CarPlayPlusWallpaper shared] applyToWindow:w];
