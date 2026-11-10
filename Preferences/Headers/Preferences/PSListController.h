@@ -4,7 +4,10 @@
 #import "PSViewController.h"
 #import "PSSpecifier.h"
 
-@interface PSListController : PSViewController
+@interface PSListController : PSViewController {
+@protected
+    NSMutableArray *_specifiers;
+}
 @property (nonatomic, retain) UITableView *table;
 @property (nonatomic, retain) NSMutableArray *specifiers;
 

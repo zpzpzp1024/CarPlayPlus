@@ -25,6 +25,7 @@
 
 // Slider cell with a live value badge.
 @interface CarPlayPlusSliderCell : PSSliderTableCell
+@property (nonatomic, strong) UILabel *label;
 @end
 
 // Stepper cell.
