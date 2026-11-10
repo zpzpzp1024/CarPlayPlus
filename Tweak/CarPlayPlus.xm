@@ -49,6 +49,17 @@ kern_return_t IOObjectRelease(io_object_t object);
 #import "PrivateHeaders.h"
 #import "CarPlayPlusAnimatedImage.h"
 
+// Rootless-aware path helper: rootless jailbreaks (Dopamine / palera1n)
+// keep the system root read-only and expose jailbreak data under /var/jb.
+static NSString *CPJBPath(NSString *path) {
+    static NSString *jbRoot;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        jbRoot = [[NSFileManager defaultManager] fileExistsAtPath:@"/var/jb"] ? @"/var/jb" : @"";
+    });
+    return [jbRoot stringByAppendingString:path];
+}
+
 // ---------------------------------------------------------------------------
 #pragma mark - Preferences
 // ---------------------------------------------------------------------------
