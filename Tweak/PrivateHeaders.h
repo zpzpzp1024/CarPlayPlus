@@ -37,6 +37,11 @@
 
 #pragma mark - Wallpaper / splash
 
+@interface BCBatteryDeviceController : NSObject
++ (instancetype)sharedInstance;               // private framework
+- (NSArray *)connectedDevices;
+@end
+
 @interface CPWRootViewController : UIViewController
 @end
 

@@ -204,7 +204,7 @@ static NSDictionary *CPBatteryInfo(void) {
 }
 
 static int CPBatteryPercent(void) {
-    static id bcClass = nil;
+    static Class bcClass = Nil;
     static dispatch_once_t once;
     dispatch_once(&once, ^{ bcClass = NSClassFromString(@"BCBatteryDeviceController"); });
     if (bcClass && [bcClass respondsToSelector:@selector(sharedInstance)]) {
@@ -353,15 +353,16 @@ static NSString *const kFullscreenToggle  = @"xyz.carplayplus.fullscreen";
 %end
 
 // apply label options to icon views (called from layout below)
-static void ApplyLabelStyleToIconView(id iconView) {
+static void ApplyLabelStyleToIconView(UIView *iconView) {
+    CARIconView *cpIcon = (CARIconView *)iconView;   // private properties from PrivateHeaders.h
     if (boolPref(kHideLabel, YES)) {
         for (UIView *sub in iconView.subviews)
             sub.hidden = YES;
     }
-    if ([iconView respondsToSelector:@selector(label)])
-        iconView.label.hidden = boolPref(kHideLabel, YES);
-    if ([iconView respondsToSelector:@selector(labelLegibilityView)])
-        iconView.labelLegibilityView.hidden = boolPref(kHideLabelback, YES);
+    if ([cpIcon respondsToSelector:@selector(label)])
+        cpIcon.label.hidden = boolPref(kHideLabel, YES);
+    if ([cpIcon respondsToSelector:@selector(labelLegibilityView)])
+        cpIcon.labelLegibilityView.hidden = boolPref(kHideLabelback, YES);
     UIColor *lblColor = [UIColor whiteColor];
     NSString *hex = CPPrefsStringForKey(klblColor, @"FFFFFF");
     unsigned val = 0;
@@ -369,8 +370,8 @@ static void ApplyLabelStyleToIconView(id iconView) {
     if ([sc scanHexInt:&val]) lblColor = [UIColor colorWithRed:((val>>16)&0xFF)/255.0
                                                          green:((val>>8)&0xFF)/255.0
                                                           blue:(val&0xFF)/255.0 alpha:1];
-    if ([iconView respondsToSelector:@selector(label)])
-        iconView.label.textColor = lblColor;
+    if ([cpIcon respondsToSelector:@selector(label)])
+        cpIcon.label.textColor = lblColor;
 }
 
 %hook CARIconView
