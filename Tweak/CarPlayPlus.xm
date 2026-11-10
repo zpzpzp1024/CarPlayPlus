@@ -17,7 +17,7 @@
 #import <sys/utsname.h>
 #import <sys/sysctl.h>
 #import <sys/types.h>
-#import <sys/sockaddr.h>
+#import <sys/socket.h>
 #import <net/if.h>
 #import <ifaddrs.h>
 #import <arpa/inet.h>
