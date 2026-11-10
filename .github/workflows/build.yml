@@ -103,31 +103,6 @@ jobs:
         run: |
           find . -name '*.deb' -exec ls -lh {} \;
 
-      - name: Verify binary architectures
-        run: |
-          DEB=$(find . -name '*.deb' | head -1)
-          echo "=== $DEB ==="
-          mkdir -p /tmp/debx
-          tar -xf "$DEB" -C /tmp/debx
-          python3 - <<'PY'
-import glob, lzma, tarfile, io
-p = glob.glob('/tmp/debx/data.tar.*')[0]
-t = tarfile.open(fileobj=io.BytesIO(lzma.decompress(open(p,'rb').read())))
-for m in t.getmembers():
-    if m.isfile():
-        print(m.name)
-PY
-          echo "=== bundles ==="
-          python3 - <<'PY'
-import glob, lzma, tarfile, io, os
-p = glob.glob('/tmp/debx/data.tar.*')[0]
-t = tarfile.open(fileobj=io.BytesIO(lzma.decompress(open(p,'rb').read())))
-t.extractall('/tmp/debx/data')
-PY
-          for f in $(find /tmp/debx/data -type f \( -name 'CarPlayPlus*' -o -name 'dylib' \) ! -name '*.plist'); do
-            file "$f"
-          done
-
       - name: Upload .deb artifacts
         uses: actions/upload-artifact@v4
         with:
