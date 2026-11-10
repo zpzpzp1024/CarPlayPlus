@@ -137,7 +137,7 @@ jobs:
 
       - name: Build package
         run: |
-          make clean package FINALPACKAGE=1 VERBOSE=1
+          make clean package FINALPACKAGE=1 ARCHS=arm64
 
       - name: List packages
         run: |
