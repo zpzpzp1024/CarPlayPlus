@@ -197,7 +197,6 @@ static UIViewController *CPTopViewController(void) {
         self.stepper.stepValue = [specifier.properties[@"step"] doubleValue] ?: 1;
         [self.stepper addTarget:self action:@selector(valueChanged:) forControlEvents:UIControlEventValueChanged];
         self.accessoryView = self.stepper;
-        self.selectedControl = self.stepper;
     }
     return self;
 }

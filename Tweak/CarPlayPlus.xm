@@ -961,6 +961,9 @@ static void OnIconLayoutChanged(NSNotification *note) {
     ApplyLayoutToAll();
 }
 
+static void OnPrefsChanged(NSNotification *note);
+static void CPApplyDashboardLayout(void);   // forward (split-screen group below)
+
 static void OnPrefsChanged(NSNotification *note) {
     if (gWidgetWindow) [gWidgetWindow updateWidgets];
     if (boolPref(kWallEnabled, NO)) {
@@ -970,6 +973,196 @@ static void OnPrefsChanged(NSNotification *note) {
         [[CarPlayPlusWallpaper shared] invalidate];
     }
     ApplyLayoutToAll();
+    CPApplyDashboardLayout();
+}
+
+// ---------------------------------------------------------------------------
+#pragma mark - Split-screen dashboard customization (runs in com.apple.CarPlayApp)
+// ---------------------------------------------------------------------------
+//
+// The CarPlay dashboard ("split view") is a CarPlayApp-scene UI rooted in
+// [UIApplication sharedApplication]._currentDashboard (a CARDashboard). Its
+// root view controller (_CARDashboardHomeViewController) hosts the vertical
+// dock bar and the grid/dashboard panes. The tweak lets the user pin any
+// CarPlay-enabled app to each of the three panes (left / top-right /
+// bottom-right). Pane layout itself is decided by CarPlay after the pinned
+// apps are launched, so this first pass launches the app via icon-tap
+// simulation - CarPlay then assigns it to the appropriate pane.
+//
+// Because pane container classes differ between iOS releases, we additionally
+// provide "Export CarPlay diagnostics" (Settings) which dumps the runtime
+// dashboard hierarchy to /var/mobile/Documents/carplayplus_dump.txt so the
+// exact pane containers can be pinned precisely on the next iteration.
+
+static NSString *const kDashboardCustom   = @"kDashboardCustom";
+static NSString *const kDashLeft          = @"kDashLeft";
+static NSString *const kDashRightTop      = @"kDashRightTop";
+static NSString *const kDashRightBottom   = @"kDashRightBottom";
+static NSString *const kDumpNotification  = @"xyz.carplayplus.dumpDashboard";
+
+static void (*orig_CPDashHomeViewDidAppear)(id self, SEL _cmd, BOOL animated);
+static void hook_CPDashHomeViewDidAppear(id self, SEL _cmd, BOOL animated) {
+    orig_CPDashHomeViewDidAppear(self, _cmd, animated);
+    CPApplyDashboardLayout();
+}
+
+// Depth-first search for the CarPlay icon view of a given bundle identifier.
+static CARIconView *CPFindDashboardIcon(UIView *root, NSString *bundleID) {
+    if (!root || !bundleID.length) return nil;
+    for (UIView *sub in root.subviews) {
+        if ([sub isKindOfClass:NSClassFromString(@"CARIconView")]) {
+            CARIconView *iv = (CARIconView *)sub;
+            NSString *bid = nil;
+            if ([iv respondsToSelector:@selector(icon)]) {
+                id icon = [iv performSelector:@selector(icon)];
+                if ([icon respondsToSelector:@selector(applicationBundleID)])
+                    bid = [icon performSelector:@selector(applicationBundleID)];
+            }
+            if ([bid isEqualToString:bundleID]) return iv;
+        }
+        CARIconView *found = CPFindDashboardIcon(sub, bundleID);
+        if (found) return found;
+    }
+    return nil;
+}
+
+// Launch / foreground the given app inside the CarPlay dashboard.
+static void CPLaunchDashboardApp(id dashboard, NSString *bundleID) {
+    if (!dashboard) return;
+
+    // 1) Prefer simulating a tap on the app's dashboard icon - CarPlay then
+    //    launches it and places it in the correct pane (native behavior).
+    UIView *rootView = nil;
+    if ([dashboard respondsToSelector:@selector(rootViewController)]) {
+        UIViewController *rootVC = [dashboard performSelector:@selector(rootViewController)];
+        rootView = rootVC.view;
+    }
+    CARIconView *icon = rootView ? CPFindDashboardIcon(rootView, bundleID) : nil;
+    if (icon) {
+        SEL tapSel = NSSelectorFromString(@"iconTapped:");
+        if ([icon respondsToSelector:tapSel]) {
+            [icon performSelector:tapSel withObject:nil];
+            return;
+        }
+        // some iOS releases use the SB-style ::_iconTapped:
+        SEL itapSel = NSSelectorFromString(@"_iconTapped:");
+        if ([icon respondsToSelector:itapSel]) {
+            [icon performSelector:itapSel withObject:nil];
+            return;
+        }
+    }
+
+    // 2) Fallback: craft a CARApplicationLaunchInfo for the app. If CarPlay
+    //    accepts it, the app becomes the foreground dashboard scene.
+    Class proxyClass = NSClassFromString(@"LSApplicationProxy");
+    Class launchClass = NSClassFromString(@"CARApplicationLaunchInfo");
+    if (proxyClass && launchClass) {
+        id proxy = [proxyClass performSelector:@selector(applicationProxyForIdentifier:)
+                                    withObject:bundleID];
+        if (proxy)
+            [launchClass performSelector:@selector(launchInfoForApplication:withActivationSettings:)
+                              withObject:proxy withObject:nil];
+    }
+}
+
+// Apply the user's dashboard configuration to the live dashboard UI.
+static void CPApplyDashboardLayout(void) {
+    if (!gEnabled() || !boolPref(kDashboardCustom, NO)) return;
+
+    UIApplication *app = [UIApplication sharedApplication];
+    id dashboard = nil;
+    if ([app respondsToSelector:@selector(_currentDashboard)])
+        dashboard = [app performSelector:@selector(_currentDashboard)];
+    if (!dashboard) return;
+
+    NSArray *keys = @[kDashLeft, kDashRightTop, kDashRightBottom];
+    for (NSString *key in keys) {
+        NSString *bid = CPPrefsStringForKey(key, @"");
+        if (!bid.length) continue;
+        // skip apps already foregrounded on the dashboard
+        if ([dashboard respondsToSelector:@selector(identifierToForegroundAppScenesMap)]) {
+            NSDictionary *scenes = [dashboard valueForKey:@"identifierToForegroundAppScenesMap"];
+            if ([scenes.allKeys containsObject:bid]) continue;
+        }
+        CPLaunchDashboardApp(dashboard, bid);
+    }
+}
+
+// Recursively serialize a view + controller hierarchy for diagnostics.
+static void CPDumpControllerTree(id vc, NSMutableString *out, NSInteger depth);
+static void CPDumpViewTree(UIView *view, NSMutableString *out, NSInteger depth) {
+    if (!view) return;
+    NSString *pad = [@"" stringByPaddingToLength:depth * 2 withString:@"  " startingAtIndex:0];
+    [out appendFormat:@"%@<%@: %p> frame=%@ hidden=%d\n",
+        pad, NSStringFromClass(view.class), view,
+        NSStringFromCGRect(view.frame), view.hidden];
+    if ([view isKindOfClass:NSClassFromString(@"CARIconView")]) {
+        NSString *bid = nil;
+        if ([view respondsToSelector:@selector(icon)]) {
+            id icon = [view performSelector:@selector(icon)];
+            if ([icon respondsToSelector:@selector(applicationBundleID)])
+                bid = [icon performSelector:@selector(applicationBundleID)];
+        }
+        [out appendFormat:@"%@  ↳ CARIconView bundleID=%@\n", pad, bid ?: @"(none)"];
+    }
+    for (UIView *sub in view.subviews) CPDumpViewTree(sub, out, depth + 1);
+}
+
+static void CPDumpControllerTree(id vc, NSMutableString *out, NSInteger depth) {
+    if (!vc) return;
+    NSString *pad = [@"" stringByPaddingToLength:depth * 2 withString:@"  " startingAtIndex:0];
+    [out appendFormat:@"%@<%@: %p> title=%@\n",
+        pad, NSStringFromClass([vc class]), vc, [vc performSelector:@selector(title)]];
+    if ([vc respondsToSelector:@selector(view)] && [vc valueForKey:@"view"])
+        CPDumpViewTree([vc valueForKey:@"view"], out, depth + 1);
+    if ([vc respondsToSelector:@selector(childViewControllers)]) {
+        for (id child in [vc valueForKey:@"childViewControllers"])
+            CPDumpControllerTree(child, out, depth);
+    }
+}
+
+static void CPWriteDashboardDump(void) {
+    @autoreleasepool {
+        NSMutableString *out = [NSMutableString string];
+        [out appendFormat:@"===== CarPlayPlus dashboard dump %@ =====\n", [NSDate date]];
+        [out appendFormat:@"process: %@\n", [NSBundle mainBundle].bundleIdentifier];
+        UIApplication *app = [UIApplication sharedApplication];
+        id dashboard = nil;
+        if ([app respondsToSelector:@selector(_currentDashboard)])
+            dashboard = [app performSelector:@selector(_currentDashboard)];
+        [out appendFormat:@"dashboard: %@\n", dashboard ? NSStringFromClass([dashboard class]) : @"(nil)"];
+        if (dashboard) {
+            if ([dashboard respondsToSelector:@selector(identifierToForegroundAppScenesMap)]) {
+                NSDictionary *scenes = [dashboard valueForKey:@"identifierToForegroundAppScenesMap"];
+                [out appendFormat:@"foregroundScenes: %@\n", scenes];
+            }
+            if ([dashboard respondsToSelector:@selector(rootViewController)]) {
+                id rootVC = [dashboard performSelector:@selector(rootViewController)];
+                CPDumpControllerTree(rootVC, out, 0);
+            }
+        }
+        NSString *path = @"/var/mobile/Documents/carplayplus_dump.txt";
+        [out writeToFile:path atomically:YES encoding:NSUTF8StringEncoding error:nil];
+    }
+}
+
+static void CPDarwinDumpCallback(CFNotificationCenterRef center, void *observer,
+                                 CFStringRef name, const void *object, CFDictionaryRef info) {
+    CPWriteDashboardDump();
+}
+
+// Install dashboard hooks. Safe for any process: every symbol is resolved at
+// runtime and registration is skipped entirely when a class is absent.
+static void CPInstallDashboardHooks(void) {
+    Class cls = NSClassFromString(@"_CARDashboardHomeViewController");
+    if (!cls) return;
+    MSHookMessageEx(cls, @selector(viewDidAppear:),
+                    (IMP)&hook_CPDashHomeViewDidAppear, (IMP *)&orig_CPDashHomeViewDidAppear);
+    CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(),
+                                    NULL,
+                                    (CFNotificationCallback)CPDarwinDumpCallback,
+                                    (__bridge CFStringRef)kDumpNotification,
+                                    NULL, CFNotificationSuspensionBehaviorDeliverImmediately);
 }
 
 %ctor {
@@ -986,7 +1179,11 @@ static void OnPrefsChanged(NSNotification *note) {
         kAPI_CarPlay: @YES, kAPI_Statusbar: @YES,
         kFull_size: @30, kFullBtn_x: @14, kFullBtn_y: @14,
         kRemoveSplash: @NO,
+        kDashboardCustom: @NO, kDashLeft: @"", kDashRightTop: @"", kDashRightBottom: @"",
     });
+
+    // Split-screen dashboard customization (CarPlayApp process; no-op elsewhere)
+    CPInstallDashboardHooks();
 
     // BKS screen-blank hook
     void *bks = dlopen("/System/Library/PrivateFrameworks/BackBoardServices.framework/BackBoardServices", RTLD_NOW);

@@ -8,9 +8,9 @@
 			<key>cell</key>
 			<string>PSGroupCell</string>
 			<key>label</key>
-			<string>Enable / Disable</string>
+			<string>启用 / 禁用</string>
 			<key>footerText</key>
-			<string>Enable or disable the entire custom status bar.</string>
+			<string>启用或禁用整个自定义状态栏。</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -22,16 +22,16 @@
 			<key>key</key>
 			<string>kStatusBar</string>
 			<key>label</key>
-			<string>Enabled</string>
+			<string>启用</string>
 		</dict>
 
 		<dict>
 			<key>cell</key>
 			<string>PSGroupCell</string>
 			<key>label</key>
-			<string>Status bar position</string>
+			<string>状态栏位置</string>
 			<key>footerText</key>
-			<string>Restart CarPlay after changing this option.</string>
+			<string>修改此选项后请重启 CarPlay。</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -50,13 +50,13 @@
 					<key>appearanceOption</key>
 					<string>0</string>
 					<key>label</key>
-					<string>Left</string>
+					<string>左侧</string>
 				</dict>
 				<dict>
 					<key>appearanceOption</key>
 					<string>1</string>
 					<key>label</key>
-					<string>Right</string>
+					<string>右侧</string>
 				</dict>
 			</array>
 		</dict>
@@ -65,7 +65,7 @@
 			<key>cell</key>
 			<string>PSGroupCell</string>
 			<key>label</key>
-			<string>Date and time</string>
+			<string>日期和时间</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -77,7 +77,7 @@
 			<key>key</key>
 			<string>kShowDate</string>
 			<key>label</key>
-			<string>Show Date</string>
+			<string>显示日期</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -91,7 +91,7 @@
 			<key>key</key>
 			<string>kDateFormat</string>
 			<key>label</key>
-			<string>Date Format ($ = newline)</string>
+			<string>日期格式（$ = 换行）</string>
 			<key>placeholder</key>
 			<string>EE,MMM d</string>
 		</dict>
@@ -107,7 +107,7 @@
 			<key>key</key>
 			<string>kLocation</string>
 			<key>label</key>
-			<string>Locale</string>
+			<string>语言区域</string>
 			<key>placeholder</key>
 			<string>en_US_POSIX</string>
 		</dict>
@@ -117,7 +117,7 @@
 			<key>action</key>
 			<string>ShowFormatHelp</string>
 			<key>label</key>
-			<string>Date Format Help</string>
+			<string>日期格式帮助</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -135,7 +135,7 @@
 			<key>min</key>
 			<integer>5</integer>
 			<key>label</key>
-			<string>Font Size</string>
+			<string>字号</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -153,14 +153,14 @@
 			<key>min</key>
 			<integer>0</integer>
 			<key>label</key>
-			<string>Date Y Position</string>
+			<string>日期纵向位置</string>
 		</dict>
 
 		<dict>
 			<key>cell</key>
 			<string>PSGroupCell</string>
 			<key>label</key>
-			<string>Weather</string>
+			<string>天气</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -172,7 +172,7 @@
 			<key>key</key>
 			<string>kWeather_icon</string>
 			<key>label</key>
-			<string>Show Weather Icon</string>
+			<string>显示天气图标</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -184,7 +184,7 @@
 			<key>key</key>
 			<string>kWeather_temperature</string>
 			<key>label</key>
-			<string>Show Temperature</string>
+			<string>显示温度</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -202,14 +202,14 @@
 			<key>min</key>
 			<integer>0</integer>
 			<key>label</key>
-			<string>Weather Y Position</string>
+			<string>天气纵向位置</string>
 		</dict>
 
 		<dict>
 			<key>cell</key>
 			<string>PSGroupCell</string>
 			<key>label</key>
-			<string>Device / Battery</string>
+			<string>设备 / 电量</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -221,7 +221,7 @@
 			<key>key</key>
 			<string>kdevice_icon</string>
 			<key>label</key>
-			<string>Show Device Icon</string>
+			<string>显示设备图标</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -239,14 +239,14 @@
 			<key>min</key>
 			<integer>0</integer>
 			<key>label</key>
-			<string>Battery Y Position</string>
+			<string>电量纵向位置</string>
 		</dict>
 
 		<dict>
 			<key>cell</key>
 			<string>PSGroupCell</string>
 			<key>label</key>
-			<string>Reset</string>
+			<string>重置</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -256,10 +256,10 @@
 			<key>alignment</key>
 			<integer>1</integer>
 			<key>label</key>
-			<string>Reset Status Bar</string>
+			<string>重置状态栏</string>
 		</dict>
 	</array>
 	<key>title</key>
-	<string>Status Bar</string>
+	<string>状态栏</string>
 </dict>
 </plist>

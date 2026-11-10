@@ -4,14 +4,14 @@
 <dict>
 	<key>items</key>
 	<array>
-		<!-- Transparent icons -->
+		<!-- 透明图标 -->
 		<dict>
 			<key>cell</key>
 			<string>PSGroupCell</string>
 			<key>label</key>
-			<string>Generate transparent icon</string>
+			<string>生成透明图标</string>
 			<key>footerText</key>
-			<string>Creates invisible placeholder apps that can be arranged on the CarPlay dashboard. Requires Carbridge bridged apps (or add them in Other Functions).</string>
+			<string>创建完全透明的占位应用，可排列在 CarPlay 仪表盘上。需要 Carbridge 桥接应用（或在“其他功能”中添加）。</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -25,7 +25,7 @@
 			<key>key</key>
 			<string>kVicon</string>
 			<key>label</key>
-			<string>The number of icons: %i</string>
+			<string>图标数量：%i</string>
 			<key>min</key>
 			<integer>0</integer>
 			<key>max</key>
@@ -39,7 +39,7 @@
 			<key>alignment</key>
 			<integer>2</integer>
 			<key>label</key>
-			<string>Create Blank Icons</string>
+			<string>创建空白图标</string>
 		</dict>
 		<dict>
 			<key>action</key>
@@ -47,15 +47,15 @@
 			<key>cell</key>
 			<string>PSLinkCell</string>
 			<key>label</key>
-			<string>CarPlay Settings</string>
+			<string>CarPlay 设置</string>
 		</dict>
 
-		<!-- Rows -->
+		<!-- 行数 -->
 		<dict>
 			<key>cell</key>
 			<string>PSGroupCell</string>
 			<key>label</key>
-			<string>Number of CarPlay dashboard app rows</string>
+			<string>CarPlay 仪表盘应用行数</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -80,12 +80,12 @@
 			</array>
 		</dict>
 
-		<!-- Columns -->
+		<!-- 列数 -->
 		<dict>
 			<key>cell</key>
 			<string>PSGroupCell</string>
 			<key>label</key>
-			<string>Number of CarPlay dashboard app columns</string>
+			<string>CarPlay 仪表盘应用列数</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -110,12 +110,12 @@
 			</array>
 		</dict>
 
-		<!-- Icon size -->
+		<!-- 图标大小 -->
 		<dict>
 			<key>cell</key>
 			<string>PSGroupCell</string>
 			<key>label</key>
-			<string>CarPlay dashboard app icon size</string>
+			<string>CarPlay 仪表盘应用图标大小</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -134,14 +134,14 @@
 			<integer>70</integer>
 		</dict>
 
-		<!-- Top offset -->
+		<!-- 顶部偏移 -->
 		<dict>
 			<key>cell</key>
 			<string>PSGroupCell</string>
 			<key>label</key>
-			<string>CarPlay dashboard app icon Top offset</string>
+			<string>CarPlay 仪表盘图标顶部偏移</string>
 			<key>footerText</key>
-			<string>Default Top Offset = 30</string>
+			<string>默认顶部偏移 = 30</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -160,14 +160,14 @@
 			<integer>150</integer>
 		</dict>
 
-		<!-- Bottom offset -->
+		<!-- 底部偏移 -->
 		<dict>
 			<key>cell</key>
 			<string>PSGroupCell</string>
 			<key>label</key>
-			<string>CarPlay dashboard app icon Bottom offset</string>
+			<string>CarPlay 仪表盘图标底部偏移</string>
 			<key>footerText</key>
-			<string>Default Bottom Offset = -30</string>
+			<string>默认底部偏移 = -30</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -186,14 +186,14 @@
 			<integer>50</integer>
 		</dict>
 
-		<!-- Left offset -->
+		<!-- 左侧偏移 -->
 		<dict>
 			<key>cell</key>
 			<string>PSGroupCell</string>
 			<key>label</key>
-			<string>CarPlay dashboard app icon Left offset</string>
+			<string>CarPlay 仪表盘图标左侧偏移</string>
 			<key>footerText</key>
-			<string>Default Left Offset = 20</string>
+			<string>默认左侧偏移 = 20</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -212,14 +212,14 @@
 			<integer>200</integer>
 		</dict>
 
-		<!-- Right offset -->
+		<!-- 右侧偏移 -->
 		<dict>
 			<key>cell</key>
 			<string>PSGroupCell</string>
 			<key>label</key>
-			<string>CarPlay dashboard app icon Right offset</string>
+			<string>CarPlay 仪表盘图标右侧偏移</string>
 			<key>footerText</key>
-			<string>Default Right Offset = 20</string>
+			<string>默认右侧偏移 = 20</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -238,12 +238,12 @@
 			<integer>200</integer>
 		</dict>
 
-		<!-- Label customize -->
+		<!-- 标签自定义 -->
 		<dict>
 			<key>cell</key>
 			<string>PSGroupCell</string>
 			<key>label</key>
-			<string>CarPlay App Label customize</string>
+			<string>CarPlay 应用标签自定义</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -255,7 +255,7 @@
 			<key>key</key>
 			<string>kHideLabel</string>
 			<key>label</key>
-			<string>Hide Icon Label</string>
+			<string>隐藏图标名称</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -267,7 +267,7 @@
 			<key>key</key>
 			<string>kHideLabelback</string>
 			<key>label</key>
-			<string>Hide Label Background</string>
+			<string>隐藏图标名称背景</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -283,7 +283,7 @@
 			<key>defaults</key>
 			<string>xyz.carplayplus.tweak</string>
 			<key>label</key>
-			<string>Icon Label Color</string>
+			<string>图标名称颜色</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -295,7 +295,7 @@
 			<key>key</key>
 			<string>kDots</string>
 			<key>label</key>
-			<string>Hide Dots</string>
+			<string>隐藏翻页圆点</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -310,10 +310,10 @@
 			<key>alignment</key>
 			<integer>1</integer>
 			<key>label</key>
-			<string>Reset Icon Layout</string>
+			<string>重置图标布局</string>
 		</dict>
 	</array>
 	<key>title</key>
-	<string>Icon Layout</string>
+	<string>图标布局</string>
 </dict>
 </plist>

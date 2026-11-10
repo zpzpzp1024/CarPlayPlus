@@ -217,9 +217,9 @@ static NSString *CPJBPath(NSString *path) {
             [specs addObject:picker];
         }
 
-        PSSpecifier *applied = [PSSpecifier groupSpecifierWithName:@"Apply"];
+        PSSpecifier *applied = [PSSpecifier groupSpecifierWithName:@"应用"];
         [specs addObject:applied];
-        PSSpecifier *apply = [PSSpecifier preferenceSpecifierNamed:@"Apply on CarPlay"
+        PSSpecifier *apply = [PSSpecifier preferenceSpecifierNamed:@"应用到 CarPlay"
                     target:self set:NULL get:NULL detail:Nil cell:PSButtonCell edit:Nil];
         apply.buttonAction = @selector(RestartCarPlay);
         [specs addObject:apply];
@@ -548,6 +548,116 @@ static NSString *kBackupRoot(void) { return CPJBPath(@"/Library/CarPlayPlus/back
             done(YES);
         }];
     return [UISwipeActionsConfiguration configurationWithActions:@[del]];
+}
+
+@end
+
+#pragma mark - Split-screen dashboard
+
+@interface CarPlayPlusDashboardController : CarPlayPlusBaseController
+@end
+
+@implementation CarPlayPlusDashboardController
+
+- (NSArray *)specifiers {
+    if (!_specifiers) _specifiers = [self loadSpecifiersFromPlistName:@"Dashboard" target:self];
+    return _specifiers;
+}
+
+- (void)viewWillAppear:(BOOL)animated {
+    [super viewWillAppear:animated];
+    [self refreshDashboardValues];
+}
+
+// Refresh the three PSTitleValueCell rows with the currently selected apps.
+- (void)refreshDashboardValues {
+    NSArray *rows = @[
+        @{@"id": @"DASH_LEFT", @"key": @"kDashLeft"},
+        @{@"id": @"DASH_RTOP", @"key": @"kDashRightTop"},
+        @{@"id": @"DASH_RBOTTOM", @"key": @"kDashRightBottom"},
+    ];
+    for (NSDictionary *row in rows) {
+        NSString *bid = CPPrefAnyGet(CPPrefsIdentifier, row[@"key"]);
+        NSString *display = @"未选择";
+        if ([bid isKindOfClass:[NSString class]] && [bid length]) {
+            NSString *name = [self appNameForBundleID:bid];
+            display = name.length ? name : bid;
+        }
+        PSSpecifier *spec = [self specifierForID:row[@"id"]];
+        if (spec) {
+            [spec setProperty:display forKey:@"value"];
+            [self reloadSpecifier:spec];
+        }
+    }
+}
+
+- (NSString *)appNameForBundleID:(NSString *)bid {
+    id ws = [NSClassFromString(@"LSApplicationWorkspace") performSelector:@selector(defaultWorkspace)];
+    if (!ws) return nil;
+    for (id proxy in [ws performSelector:@selector(allApplications)]) {
+        NSString *pid = [proxy performSelector:@selector(applicationBundleIdentifier)];
+        if ([pid isEqualToString:bid])
+            return [proxy performSelector:@selector(localizedName)] ?: bid;
+    }
+    return nil;
+}
+
+- (void)PickLeftApp         { [self showAppPickerForKey:@"kDashLeft"       title:@"选择左侧应用"]; }
+- (void)PickRightTopApp     { [self showAppPickerForKey:@"kDashRightTop"   title:@"选择右上应用"]; }
+- (void)PickRightBottomApp  { [self showAppPickerForKey:@"kDashRightBottom" title:@"选择右下应用"]; }
+
+- (void)showAppPickerForKey:(NSString *)key title:(NSString *)title {
+    id ws = [NSClassFromString(@"LSApplicationWorkspace") performSelector:@selector(defaultWorkspace)];
+    NSMutableArray *list = [NSMutableArray array];
+    for (id proxy in [ws performSelector:@selector(allApplications)]) {
+        NSString *bid = [proxy performSelector:@selector(applicationBundleIdentifier)];
+        if (!bid || [bid hasPrefix:@"com.apple."]) continue;
+        NSString *name = [proxy performSelector:@selector(localizedName)] ?: bid;
+        [list addObject:@{@"id": bid, @"name": name}];
+    }
+    [list sortUsingComparator:^NSComparisonResult(NSDictionary *a, NSDictionary *b) {
+        return [a[@"name"] compare:b[@"name"]];
+    }];
+
+    UIAlertController *sheet = [UIAlertController alertControllerWithTitle:title
+        message:@"选择要固定显示在该区域的应用（需支持 CarPlay）"
+        preferredStyle:UIAlertControllerStyleActionSheet];
+    for (NSDictionary *app in list) {
+        [sheet addAction:[UIAlertAction actionWithTitle:app[@"name"] style:UIAlertActionStyleDefault
+            handler:^(UIAlertAction *a) {
+                CPPrefAnySet(CPPrefsIdentifier, key, app[@"id"]);
+                CPNotifyPrefsChanged();
+                [self refreshDashboardValues];
+            }]];
+    }
+    [sheet addAction:[UIAlertAction actionWithTitle:@"清除该区域" style:UIAlertActionStyleDestructive
+        handler:^(UIAlertAction *a) {
+            CPPrefAnyRemove(CPPrefsIdentifier, key);
+            CPNotifyPrefsChanged();
+            [self refreshDashboardValues];
+        }]];
+    [sheet addAction:[UIAlertAction actionWithTitle:@"取消" style:UIAlertActionStyleCancel handler:nil]];
+    if (sheet.popoverPresentationController) sheet.popoverPresentationController.sourceView = self.view;
+    [self presentViewController:sheet animated:YES completion:nil];
+}
+
+- (void)ExportDashboardDump {
+    // Ask the CarPlayApp process (where the dashboard lives) to write its dump.
+    notify_post("xyz.carplayplus.dumpDashboard");
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"CarPlayPlus"
+        message:@"已请求导出。请保持 CarPlay 连接并等待几秒，然后查看 /var/mobile/Documents/carplayplus_dump.txt。"
+        preferredStyle:UIAlertControllerStyleAlert];
+    [alert addAction:[UIAlertAction actionWithTitle:@"好" style:UIAlertActionStyleDefault handler:nil]];
+    [self presentViewController:alert animated:YES completion:nil];
+}
+
+- (void)ResetDashboard {
+    [@[@"kDashboardCustom", @"kDashLeft", @"kDashRightTop", @"kDashRightBottom"]
+        enumerateObjectsUsingBlock:^(NSString *k, NSUInteger i, BOOL *stop) {
+            CPPrefAnyRemove(CPPrefsIdentifier, k);
+    }];
+    CPNotifyPrefsChanged();
+    [self refreshDashboardValues];
 }
 
 @end

@@ -29,7 +29,33 @@
 @interface CARIconView : UIView
 @property (nonatomic, strong) UILabel *label;
 @property (nonatomic, strong) UIView *labelLegibilityView;
+@property (nonatomic, strong) id icon;                   // SBIcon — resolves applicationBundleID at runtime
 - (void)setIconSize:(CGFloat)size;
+@end
+
+@class SBIcon;                                   // resolve at runtime
+
+#pragma mark - Split-screen dashboard (CarPlayApp process)
+
+// [UIApplication sharedApplication]._currentDashboard  → CARDashboard
+@interface CARDashboard : NSObject
+@property (nonatomic, strong) UIViewController *rootViewController;
+@property (nonatomic, strong) NSDictionary *identifierToForegroundAppScenesMap;
+- (void)handleEvent:(id)event;
+@end
+
+@interface CAREvent : NSObject
++ (id)eventWithType:(unsigned long long)type context:(id)context;
+@end
+
+// Root controller of the CarPlay dashboard (home) screen
+@interface _CARDashboardHomeViewController : UIViewController
+- (void)appDockViewController;   // CARAppDockViewController (vertical dock bar)
+- (void)_refreshAppDock;
+@end
+
+@interface CARApplicationLaunchInfo : NSObject
++ (id)launchInfoForApplication:(id)application withActivationSettings:(id)settings;
 @end
 
 @interface CARIconListPageControl : UIPageControl

@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleDevelopmentRegion</key>
-	<string>English</string>
+	<string>zh_CN</string>
 	<key>CFBundleExecutable</key>
 	<string>CarPlayPlus</string>
 	<key>CFBundleIdentifier</key>
@@ -25,6 +25,6 @@
 	<key>MinimumOSVersion</key>
 	<string>14.0</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Choose a wallpaper image or animated GIF for your CarPlay home screen.</string>
+	<string>选择一张壁纸图片或动图 GIF，用于 CarPlay 主界面。</string>
 </dict>
 </plist>

@@ -8,7 +8,7 @@
 			<key>cell</key>
 			<string>PSGroupCell</string>
 			<key>label</key>
-			<string>Time</string>
+			<string>时间</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -20,7 +20,7 @@
 			<key>key</key>
 			<string>kEnaTimeColor</string>
 			<key>label</key>
-			<string>Custom Time Color</string>
+			<string>自定义时间颜色</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -34,14 +34,14 @@
 			<key>defaults</key>
 			<string>xyz.carplayplus.tweak</string>
 			<key>label</key>
-			<string>Time Color</string>
+			<string>时间颜色</string>
 		</dict>
 
 		<dict>
 			<key>cell</key>
 			<string>PSGroupCell</string>
 			<key>label</key>
-			<string>Carrier</string>
+			<string>运营商</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -55,7 +55,7 @@
 			<key>defaults</key>
 			<string>xyz.carplayplus.tweak</string>
 			<key>label</key>
-			<string>Carrier Color</string>
+			<string>运营商颜色</string>
 		</dict>
 
 		<dict>
@@ -74,7 +74,7 @@
 			<key>key</key>
 			<string>kEnaWifiColor</string>
 			<key>label</key>
-			<string>Custom Wi-Fi Color</string>
+			<string>自定义 Wi-Fi 颜色</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -88,14 +88,14 @@
 			<key>defaults</key>
 			<string>xyz.carplayplus.tweak</string>
 			<key>label</key>
-			<string>Wi-Fi Color</string>
+			<string>Wi-Fi 颜色</string>
 		</dict>
 
 		<dict>
 			<key>cell</key>
 			<string>PSGroupCell</string>
 			<key>label</key>
-			<string>Network (LTE / 5G)</string>
+			<string>网络（LTE / 5G）</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -107,7 +107,7 @@
 			<key>key</key>
 			<string>kEnaLteColor</string>
 			<key>label</key>
-			<string>Custom Network Color</string>
+			<string>自定义网络颜色</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -121,7 +121,7 @@
 			<key>defaults</key>
 			<string>xyz.carplayplus.tweak</string>
 			<key>label</key>
-			<string>Network Color (On)</string>
+			<string>网络颜色（已连接）</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -135,14 +135,14 @@
 			<key>defaults</key>
 			<string>xyz.carplayplus.tweak</string>
 			<key>label</key>
-			<string>Network Color (Off)</string>
+			<string>网络颜色（未连接）</string>
 		</dict>
 
 		<dict>
 			<key>cell</key>
 			<string>PSGroupCell</string>
 			<key>label</key>
-			<string>Reset</string>
+			<string>重置</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -152,10 +152,10 @@
 			<key>alignment</key>
 			<integer>1</integer>
 			<key>label</key>
-			<string>Reset Colors</string>
+			<string>重置颜色</string>
 		</dict>
 	</array>
 	<key>title</key>
-	<string>Status Bar Color</string>
+	<string>状态栏颜色</string>
 </dict>
 </plist>

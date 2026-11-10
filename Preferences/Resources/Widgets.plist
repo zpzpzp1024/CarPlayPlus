@@ -8,9 +8,9 @@
 			<key>cell</key>
 			<string>PSGroupCell</string>
 			<key>label</key>
-			<string>Web Widgets</string>
+			<string>网页小组件</string>
 			<key>footerText</key>
-			<string>HTML widgets are rendered into the CarPlay home screen inside a transparent WKWebView. Iterate with a JSON file at /var/jb/Library/CarPlayPlus/Widgets/widgets.json, or use the Add Widget sheet below (SBHTML / iWidgets / Universal folders).</string>
+			<string>HTML 小组件会渲染到 CarPlay 主界面的透明 WKWebView 中。可通过 /var/jb/Library/CarPlayPlus/Widgets/widgets.json 管理，或使用下方“添加小组件”（支持 SBHTML / iWidgets / Universal 文件夹）。</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -20,7 +20,7 @@
 			<key>alignment</key>
 			<integer>2</integer>
 			<key>label</key>
-			<string>Add Widget</string>
+			<string>添加小组件</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -30,16 +30,16 @@
 			<key>alignment</key>
 			<integer>2</integer>
 			<key>label</key>
-			<string>Apply Widgets</string>
+			<string>应用小组件</string>
 		</dict>
 
 		<dict>
 			<key>cell</key>
 			<string>PSGroupCell</string>
 			<key>label</key>
-			<string>Data APIs</string>
+			<string>数据接口</string>
 			<key>footerText</key>
-			<string>Control which data the tweak injects into the widget JavaScript engine (mainUpdate API).</string>
+			<string>控制插件向小组件 JavaScript 引擎注入哪些数据（mainUpdate API）。</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -51,7 +51,7 @@
 			<key>key</key>
 			<string>kAPI_Music</string>
 			<key>label</key>
-			<string>Music (Now Playing)</string>
+			<string>音乐（正在播放）</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -63,7 +63,7 @@
 			<key>key</key>
 			<string>kAPI_Battey</string>
 			<key>label</key>
-			<string>Battery</string>
+			<string>电量</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -75,7 +75,7 @@
 			<key>key</key>
 			<string>kAPI_System</string>
 			<key>label</key>
-			<string>System Info</string>
+			<string>系统信息</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -87,7 +87,7 @@
 			<key>key</key>
 			<string>kAPI_Weather</string>
 			<key>label</key>
-			<string>Weather</string>
+			<string>天气</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -99,7 +99,7 @@
 			<key>key</key>
 			<string>kAPI_CarPlay</string>
 			<key>label</key>
-			<string>CarPlay Status</string>
+			<string>CarPlay 状态</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -111,10 +111,10 @@
 			<key>key</key>
 			<string>kAPI_Statusbar</string>
 			<key>label</key>
-			<string>Status Bar Data</string>
+			<string>状态栏数据</string>
 		</dict>
 	</array>
 	<key>title</key>
-	<string>Widgets</string>
+	<string>小组件</string>
 </dict>
 </plist>

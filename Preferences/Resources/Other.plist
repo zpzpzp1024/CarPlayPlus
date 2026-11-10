@@ -8,9 +8,9 @@
 			<key>cell</key>
 			<string>PSGroupCell</string>
 			<key>label</key>
-			<string>Fullscreen Apps</string>
+			<string>全屏应用</string>
 			<key>footerText</key>
-			<string>Choose the applications that should open in full screen on your CarPlay instead of the split view.</string>
+			<string>选择在 CarPlay 上以全屏方式打开（而不是分屏显示）的应用。</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -20,16 +20,16 @@
 			<key>alignment</key>
 			<integer>2</integer>
 			<key>label</key>
-			<string>Select Fullscreen Apps</string>
+			<string>选择全屏应用</string>
 		</dict>
 
 		<dict>
 			<key>cell</key>
 			<string>PSGroupCell</string>
 			<key>label</key>
-			<string>Fullscreen Button</string>
+			<string>全屏按钮</string>
 			<key>footerText</key>
-			<string>Toggle the fullscreen mode straight from the CarPlay dock.</string>
+			<string>直接从 CarPlay 侧边栏切换全屏模式。</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -47,7 +47,7 @@
 			<key>min</key>
 			<integer>0</integer>
 			<key>label</key>
-			<string>Button X</string>
+			<string>按钮 X</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -65,7 +65,7 @@
 			<key>min</key>
 			<integer>0</integer>
 			<key>label</key>
-			<string>Button Y</string>
+			<string>按钮 Y</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -83,14 +83,14 @@
 			<key>min</key>
 			<integer>10</integer>
 			<key>label</key>
-			<string>Button Size</string>
+			<string>按钮大小</string>
 		</dict>
 
 		<dict>
 			<key>cell</key>
 			<string>PSGroupCell</string>
 			<key>label</key>
-			<string>Startup</string>
+			<string>启动</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -102,14 +102,14 @@
 			<key>key</key>
 			<string>kRemoveSplash</string>
 			<key>label</key>
-			<string>Hide Splash Screen</string>
+			<string>隐藏启动画面</string>
 		</dict>
 
 		<dict>
 			<key>cell</key>
 			<string>PSGroupCell</string>
 			<key>label</key>
-			<string>Reset</string>
+			<string>重置</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -119,10 +119,10 @@
 			<key>alignment</key>
 			<integer>1</integer>
 			<key>label</key>
-			<string>Reset All Settings</string>
+			<string>重置所有设置</string>
 		</dict>
 	</array>
 	<key>title</key>
-	<string>Other Functions</string>
+	<string>其他功能</string>
 </dict>
 </plist>

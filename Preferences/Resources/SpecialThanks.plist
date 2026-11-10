@@ -8,9 +8,9 @@
 			<key>cell</key>
 			<string>PSGroupCell</string>
 			<key>label</key>
-			<string>Credits</string>
+			<string>关于</string>
 			<key>footerText</key>
-			<string>CarPlayPlus — a from-scratch, modern re-implementation of the Airaw CarPlay tweak, reconstructed from static analysis.</string>
+			<string>CarPlayPlus — 基于静态分析从零重制的 Airaw CarPlay 插件现代化版本。</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -18,7 +18,7 @@
 			<key>action</key>
 			<string>openURL:</string>
 			<key>label</key>
-			<string>Project Repository</string>
+			<string>项目仓库</string>
 			<key>url</key>
 			<string>https://github.com</string>
 		</dict>
@@ -28,7 +28,7 @@
 			<key>action</key>
 			<string>openURL:</string>
 			<key>label</key>
-			<string>NSDateFormatter Reference</string>
+			<string>NSDateFormatter 参考文档</string>
 			<key>url</key>
 			<string>https://nsdateformatter.com/</string>
 		</dict>
@@ -36,12 +36,12 @@
 			<key>cell</key>
 			<string>PSGroupCell</string>
 			<key>label</key>
-			<string>Acknowledgements</string>
+			<string>致谢</string>
 			<key>footerText</key>
-			<string>Icon layout, GIF wallpapers, status bar and HTML widgets were inspired by the Airaw tweak (© Dcsyhi). This project contains no upstream code.</string>
+			<string>图标布局、GIF 壁纸、状态栏和 HTML 小组件的思路参考自 Airaw 插件（© Dcsyhi）。本项目不包含上游代码。</string>
 		</dict>
 	</array>
 	<key>title</key>
-	<string>Special Thanks</string>
+	<string>特别鸣谢</string>
 </dict>
 </plist>

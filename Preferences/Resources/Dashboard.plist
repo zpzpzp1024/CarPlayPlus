@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>items</key>
+	<array>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
+			<string>分屏自定义</string>
+			<key>footerText</key>
+			<string>开启后，每次进入 CarPlay 分屏（仪表盘）会自动把左侧、右上、右下三个区域切换为你指定的应用。应用需支持 CarPlay；布局归类由 CarPlay 决定（导航类进左侧，媒体/小组件类进右侧）。</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<false/>
+			<key>defaults</key>
+			<string>xyz.carplayplus.tweak</string>
+			<key>key</key>
+			<string>kDashboardCustom</string>
+			<key>label</key>
+			<string>启用分屏自定义</string>
+		</dict>
+
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
+			<string>左侧主区域（地图导航区）</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSTitleValueCell</string>
+			<key>action</key>
+			<string>PickLeftApp</string>
+			<key>id</key>
+			<string>DASH_LEFT</string>
+			<key>label</key>
+			<string>左侧应用</string>
+			<key>value</key>
+			<string>未选择</string>
+		</dict>
+
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
+			<string>右上区域</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSTitleValueCell</string>
+			<key>action</key>
+			<string>PickRightTopApp</string>
+			<key>id</key>
+			<string>DASH_RTOP</string>
+			<key>label</key>
+			<string>右上应用</string>
+			<key>value</key>
+			<string>未选择</string>
+		</dict>
+
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
+			<string>右下区域（音乐播放器区）</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSTitleValueCell</string>
+			<key>action</key>
+			<string>PickRightBottomApp</string>
+			<key>id</key>
+			<string>DASH_RBOTTOM</string>
+			<key>label</key>
+			<string>右下应用</string>
+			<key>value</key>
+			<string>未选择</string>
+		</dict>
+
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
+			<string>诊断</string>
+			<key>footerText</key>
+			<string>点击下方按钮会让 CarPlay 把当前分屏的完整界面层级导出到 /var/mobile/Documents/carplayplus_dump.txt，用于精确绑定三个区域。请连接 CarPlay 后点击导出。</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSButtonCell</string>
+			<key>action</key>
+			<string>ExportDashboardDump</string>
+			<key>alignment</key>
+			<integer>2</integer>
+			<key>label</key>
+			<string>导出 CarPlay 诊断信息</string>
+		</dict>
+
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
+			<string>重置</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSButtonCell</string>
+			<key>action</key>
+			<string>ResetDashboard</string>
+			<key>alignment</key>
+			<integer>1</integer>
+			<key>label</key>
+			<string>清除分屏设置</string>
+		</dict>
+	</array>
+	<key>title</key>
+	<string>分屏自定义</string>
+</dict>
+</plist>

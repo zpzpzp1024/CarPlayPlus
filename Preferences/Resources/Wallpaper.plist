@@ -8,9 +8,9 @@
 			<key>cell</key>
 			<string>PSGroupCell</string>
 			<key>label</key>
-			<string>Enable / Disable</string>
+			<string>启用 / 禁用</string>
 			<key>footerText</key>
-			<string>Replaces the CarPlay home wallpaper. GIF files are animated automatically.</string>
+			<string>替换 CarPlay 主界面壁纸。GIF 文件会自动播放动画。</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -22,15 +22,15 @@
 			<key>key</key>
 			<string>kWallEnabled</string>
 			<key>label</key>
-			<string>Enabled</string>
+			<string>启用</string>
 		</dict>
 		<dict>
 			<key>cell</key>
 			<string>PSGroupCell</string>
 			<key>label</key>
-			<string>Wallpaper image</string>
+			<string>壁纸图片</string>
 			<key>footerText</key>
-			<string>PNG, JPG or animated GIF picked from the photo library. Stored at /var/jb/Library/CarPlayPlus/Wallpapers.</string>
+			<string>从相册选择 PNG、JPG 或动态 GIF。文件保存在 /var/jb/Library/CarPlayPlus/Wallpapers。</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -42,13 +42,13 @@
 			<key>key</key>
 			<string>kWallpaper</string>
 			<key>label</key>
-			<string>Pick Wallpaper Image / GIF</string>
+			<string>选择壁纸图片 / GIF</string>
 		</dict>
 		<dict>
 			<key>cell</key>
 			<string>PSGroupCell</string>
 			<key>label</key>
-			<string>Adjustments</string>
+			<string>调节</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -66,7 +66,7 @@
 			<key>min</key>
 			<integer>0</integer>
 			<key>label</key>
-			<string>Dimming (%)</string>
+			<string>变暗（%）</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -78,15 +78,15 @@
 			<key>key</key>
 			<string>kWallpaperMotion</string>
 			<key>label</key>
-			<string>Parallax Motion Effect</string>
+			<string>视差动效</string>
 		</dict>
 		<dict>
 			<key>cell</key>
 			<string>PSGroupCell</string>
 			<key>label</key>
-			<string>Apply</string>
+			<string>应用</string>
 			<key>footerText</key>
-			<string>Restarts the CarPlay app to rebuild the home screen with the new wallpaper.</string>
+			<string>重启 CarPlay 应用以使用新壁纸重建主界面。</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -96,7 +96,7 @@
 			<key>alignment</key>
 			<integer>2</integer>
 			<key>label</key>
-			<string>Apply on CarPlay</string>
+			<string>应用到 CarPlay</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -106,10 +106,10 @@
 			<key>alignment</key>
 			<integer>1</integer>
 			<key>label</key>
-			<string>Reset Wallpaper</string>
+			<string>重置壁纸</string>
 		</dict>
 	</array>
 	<key>title</key>
-	<string>Car Wallpaper</string>
+	<string>车载壁纸</string>
 </dict>
 </plist>
