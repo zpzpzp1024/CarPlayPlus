@@ -28,12 +28,14 @@ permissions:
   contents: write
 
 env:
-  THEOS: ${{ runner.temp }}/theos
   SDK_VERSION: "14.5"
 
 jobs:
   build:
     runs-on: macos-latest
+    env:
+      # runner.temp is only available in job-level contexts
+      THEOS: ${{ runner.temp }}/theos
     steps:
       - name: Checkout
         uses: actions/checkout@v4
