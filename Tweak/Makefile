@@ -6,7 +6,7 @@ CarPlayPlus_FILES = CarPlayPlus.xm CarPlayPlusAnimatedImage.m
 CarPlayPlus_CFLAGS = -fobjc-arc -w
 CarPlayPlus_LIBRARIES = substrate
 CarPlayPlus_FRAMEWORKS = UIKit Foundation CoreGraphics QuartzCore WebKit IOKit CoreTelephony CoreServices
-CarPlayPlus_PRIVATE_FRAMEWORKS = BackBoardServices MediaRemote
+# BackBoardServices & MediaRemote are private frameworks resolved via dlopen/
 
 # On Linux (Theos CI) force clang to use ld64.lld for Mach-O linking and
 # feed it the options clang's Darwin driver omits without an Apple toolchain.

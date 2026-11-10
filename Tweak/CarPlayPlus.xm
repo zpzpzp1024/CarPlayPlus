@@ -848,20 +848,23 @@ allowingReadAccessToURL:[NSURL fileURLWithPath:dir]];
     NSMutableString *js = [NSMutableString string];
 
     if (boolPref(kAPI_Music, YES)) {
-        extern void MRMediaRemoteGetNowPlayingInfo(dispatch_queue_t, void (^)(NSDictionary *));
-        extern NSString *kMRMediaRemoteNowPlayingInfoTitle;
-        extern NSString *kMRMediaRemoteNowPlayingInfoArtist;
-        extern NSString *kMRMediaRemoteNowPlayingInfoAlbum;
-        extern NSString *kMRMediaRemoteNowPlayingInfoDuration;
-        extern NSString *kMRMediaRemoteNowPlayingInfoElapsedTime;
+        // MediaRemote is a private framework; resolve the entry point at
+        // runtime so the tweak can be linked against SDKs without its .tbd.
+        static void (*MRMediaRemoteGetNowPlayingInfoPtr)(dispatch_queue_t, void (^)(NSDictionary *)) = NULL;
+        static dispatch_once_t cpMROnce;
+        dispatch_once(&cpMROnce, ^{
+            void *mr = dlopen("/System/Library/PrivateFrameworks/MediaRemote.framework/MediaRemote", RTLD_NOW);
+            if (mr) MRMediaRemoteGetNowPlayingInfoPtr = dlsym(mr, "MRMediaRemoteGetNowPlayingInfo");
+        });
         __block NSDictionary *now = nil;
-        MRMediaRemoteGetNowPlayingInfo(dispatch_get_main_queue(), ^(NSDictionary *info) { now = info; });
+        if (MRMediaRemoteGetNowPlayingInfoPtr)
+            MRMediaRemoteGetNowPlayingInfoPtr(dispatch_get_main_queue(), ^(NSDictionary *info) { now = info; });
         if (now) {
-            NSString *t = now[kMRMediaRemoteNowPlayingInfoTitle] ?: @"";
-            NSString *a = now[kMRMediaRemoteNowPlayingInfoArtist] ?: @"";
-            NSString *al = now[kMRMediaRemoteNowPlayingInfoAlbum] ?: @"";
-            NSNumber *dur = now[kMRMediaRemoteNowPlayingInfoDuration] ?: @0;
-            NSNumber *ela = now[kMRMediaRemoteNowPlayingInfoElapsedTime] ?: @0;
+            NSString *t = now[@"kMRMediaRemoteNowPlayingInfoTitle"] ?: @"";
+            NSString *a = now[@"kMRMediaRemoteNowPlayingInfoArtist"] ?: @"";
+            NSString *al = now[@"kMRMediaRemoteNowPlayingInfoAlbum"] ?: @"";
+            NSNumber *dur = now[@"kMRMediaRemoteNowPlayingInfoDuration"] ?: @0;
+            NSNumber *ela = now[@"kMRMediaRemoteNowPlayingInfoElapsedTime"] ?: @0;
             t = [t stringByReplacingOccurrencesOfString:@"'" withString:@"\\'"];
             a = [a stringByReplacingOccurrencesOfString:@"'" withString:@"\\'"];
             al = [al stringByReplacingOccurrencesOfString:@"'" withString:@"\\'"];
