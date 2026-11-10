@@ -8,7 +8,6 @@ extern NSString * const PSLinkListCell;
 extern NSString * const PSLinkCell;
 extern NSString * const PSSwitchCell;
 extern NSString * const PSButtonCell;
-extern NSString * const PSEditTextCell;
 extern NSString * const PSSliderCell;
 extern NSString * const PSControlCell;
 
