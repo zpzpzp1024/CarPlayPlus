@@ -325,7 +325,7 @@ static NSString *const kFullscreenToggle  = @"xyz.carplayplus.fullscreen";
                 [iv setIconSize:(CGFloat)iconSize];
 }
 
-@end
+%end
 
 %hook CARIconListPageControl
 
@@ -334,7 +334,7 @@ static NSString *const kFullscreenToggle  = @"xyz.carplayplus.fullscreen";
     %orig;
 }
 
-@end
+%end
 
 // apply label options to icon views (called from layout below)
 static void ApplyLabelStyleToIconView(UIView *iconView) {
@@ -364,7 +364,7 @@ static void ApplyLabelStyleToIconView(UIView *iconView) {
     if (gEnabled()) ApplyLabelStyleToIconView(self);
 }
 
-@end
+%end
 
 static void ApplyLayoutToAll(void) {
     NSArray *windows = [UIApplication sharedApplication].windows;
@@ -519,7 +519,7 @@ static void ApplyLayoutToAll(void) {
     });
 }
 
-@end
+%end
 
 %hook CARSplashScreenViewController
 
@@ -529,7 +529,7 @@ static void ApplyLayoutToAll(void) {
         self.view.hidden = YES;
 }
 
-@end
+%end
 
 %end // CarPlayPlusWallpaper
 
@@ -671,7 +671,7 @@ static void ApplyLayoutToAll(void) {
     });
 }
 
-@end
+%end
 
 %hook CARStatusBarViewController
 
@@ -681,7 +681,7 @@ static void ApplyLayoutToAll(void) {
     [CarPlayPlusStatusBar shared].side = intPref(kOrienation, 0);
 }
 
-@end
+%end
 
 %end // CarPlayPlusStatusBar
 
@@ -725,7 +725,7 @@ static void hook_BKSDisplayServicesSetScreenBlanked(int blanked) {
                                                        userInfo:@{@"active": @(gFullscreenActive)}];
 }
 
-@end
+%end
 
 %end // CarPlayPlusFullscreen
 
