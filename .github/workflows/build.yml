@@ -86,6 +86,9 @@ jobs:
           done
           [ -x /usr/bin/ld64.lld ] && sudo ln -sf /usr/bin/ld64.lld "$TC/ld64.lld"
           [ -x /usr/bin/ld.lld ] && sudo ln -sf /usr/bin/ld.lld "$TC/ld"
+          # clang drives links with the system `ld` by default; point it at
+          # ld64.lld so Mach-O linking works (GNU ld.bfd cannot link iOS targets).
+          sudo ln -sf /usr/bin/ld64.lld /usr/bin/ld
           ls -la "$TC"
 
       # ------------------------------------------------------------
