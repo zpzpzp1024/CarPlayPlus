@@ -38,7 +38,7 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends \
-            build-essential clang fakeroot dpkg-dev git-lfs \
+            build-essential clang lld llvm fakeroot dpkg-dev git-lfs \
             unzip curl ca-certificates
 
       # ------------------------------------------------------------
@@ -66,6 +66,27 @@ jobs:
           make -C /tmp/ldid-src -j2
           cp /tmp/ldid-src/ldid "$THEOS/bin/ldid"
           chmod 755 "$THEOS/bin/ldid"
+
+      # On Linux, Theos expects its (fake) toolchain at
+      # $THEOS/toolchain/linux/iphone/bin, pointing at host clang and lld.
+      # clang drives the link itself and picks ld64.lld for Mach-O targets.
+      - name: Create fake toolchain
+        run: |
+          set -e
+          TC="$THEOS/toolchain/linux/iphone/bin"
+          sudo mkdir -p "$TC"
+          sudo ln -sf "$(command -v clang)" "$TC/clang"
+          sudo ln -sf "$(command -v clang++)" "$TC/clang++"
+          for t in ar nm ranlib strip strings; do
+            if [ -x "/usr/bin/llvm-$t" ]; then
+              sudo ln -sf "/usr/bin/llvm-$t" "$TC/$t"
+            elif [ -x "/usr/bin/$t" ]; then
+              sudo ln -sf "/usr/bin/$t" "$TC/$t"
+            fi
+          done
+          [ -x /usr/bin/ld64.lld ] && sudo ln -sf /usr/bin/ld64.lld "$TC/ld64.lld"
+          [ -x /usr/bin/ld.lld ] && sudo ln -sf /usr/bin/ld.lld "$TC/ld"
+          ls -la "$TC"
 
       # ------------------------------------------------------------
       # iOS SDK (cached across runs)

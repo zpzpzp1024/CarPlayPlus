@@ -1,0 +1,16 @@
+# Force LF line endings for all text files (Theos/logos and shell scripts
+# are sensitive to CRLF on Linux CI agents).
+* text=auto eol=lf
+
+# Binary blobs must never be line-converted
+*.deb binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.dylib binary
+*.so binary
+*.tar binary
+*.gz binary
+*.tgz binary
+*.zip binary
