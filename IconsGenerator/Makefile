@@ -19,7 +19,6 @@ endif
 
 include $(THEOS_MAKE_PATH)/tool.mk
 
-# The generator writes under /Library/CarPlayPlus and runs `/usr/bin/uicache`,
-# so it must run as root even when spawned from the mobile Preferences app.
-after-install::
-	chmod 6755 $(THEOS_STAGING_DIR)/usr/bin/CarPlayPlusIconsGenerator
+# The generator must run as root even when spawned from the mobile
+# Preferences app; the setuid bit is applied in layout/DEBIAN/postinst
+# (which covers both rootful and /var/jb rootless install paths).

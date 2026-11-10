@@ -16,4 +16,13 @@ if [ -d "$DIR2" ]; then
     chmod -R 0775 "$DIR2/Wallpapers" "$DIR2/backup" "$DIR2/Preferences" "$DIR2/Widgets" 2>/dev/null
 fi
 
+# CarPlayPlusIconsGenerator writes under /Library/CarPlayPlus and spawns
+# uicache, so it must run as root even when called from the mobile
+# Preferences app: mark it setuid root wherever it was installed.
+if [ -f /var/jb/usr/bin/CarPlayPlusIconsGenerator ]; then
+    chmod 6755 /var/jb/usr/bin/CarPlayPlusIconsGenerator
+elif [ -f /usr/bin/CarPlayPlusIconsGenerator ]; then
+    chmod 6755 /usr/bin/CarPlayPlusIconsGenerator
+fi
+
 exit 0

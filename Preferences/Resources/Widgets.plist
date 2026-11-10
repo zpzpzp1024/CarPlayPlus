@@ -10,7 +10,7 @@
 			<key>label</key>
 			<string>Web Widgets</string>
 			<key>footerText</key>
-			<string>HTML widgets are rendered into the CarPlay home screen inside a transparent WKWebView. Iterate with a JSON file at /Library/CarPlayPlus/Widgets/widgets.json, or use the Add Widget sheet below (SBHTML / iWidgets / Universal folders).</string>
+			<string>HTML widgets are rendered into the CarPlay home screen inside a transparent WKWebView. Iterate with a JSON file at /var/jb/Library/CarPlayPlus/Widgets/widgets.json, or use the Add Widget sheet below (SBHTML / iWidgets / Universal folders).</string>
 		</dict>
 		<dict>
 			<key>cell</key>

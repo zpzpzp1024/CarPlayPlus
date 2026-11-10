@@ -786,7 +786,7 @@ static void hook_BKSDisplayServicesSetScreenBlanked(int blanked) {
         return [NSString stringWithFormat:@"/var/mobile/Library/iWidgets/%@/Widget.html", name];
     if ([kind isEqualToString:@"Universal"])
         return [NSString stringWithFormat:@"/var/mobile/Library/Widgets/Universal/%@/index.html", name];
-    NSString *bundle = [NSString stringWithFormat:@"/Library/CarPlayPlus/Widgets/Controls/%@.bundle", name];
+    NSString *bundle = [NSString stringWithFormat:@"%@/Widgets/Controls/%@.bundle", CPJBPath(@"/Library/CarPlayPlus"), name];
     NSDictionary *pl = [NSDictionary dictionaryWithContentsOfFile:[bundle stringByAppendingPathComponent:@"Info.plist"]];
     NSString *main = pl[@"CFBundleExecutable"] ?: @"index.html";
     return [bundle stringByAppendingPathComponent:main];

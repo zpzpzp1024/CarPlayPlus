@@ -30,7 +30,7 @@
 			<key>label</key>
 			<string>Wallpaper image</string>
 			<key>footerText</key>
-			<string>PNG, JPG or animated GIF picked from the photo library. Stored at /Library/CarPlayPlus/Wallpapers.</string>
+			<string>PNG, JPG or animated GIF picked from the photo library. Stored at /var/jb/Library/CarPlayPlus/Wallpapers.</string>
 		</dict>
 		<dict>
 			<key>cell</key>

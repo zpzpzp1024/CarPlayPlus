@@ -9,6 +9,15 @@
 #import <Photos/Photos.h>
 #import <objc/runtime.h>
 
+// Rootless-aware path helper: rootless jailbreaks (Dopamine / palera1n)
+// keep the system root read-only and expose jailbreak data under /var/jb.
+static NSString *CPJBPath(NSString *path) {
+    static NSString *jbRoot;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{ jbRoot = [[NSFileManager defaultManager] fileExistsAtPath:@"/var/jb"] ? @"/var/jb" : @""; });
+    return [jbRoot stringByAppendingString:path];
+}
+
 static UIViewController *CPTopViewController(void) {
     UIViewController *top = [UIApplication sharedApplication].keyWindow.rootViewController;
     while (top.presentedViewController) top = top.presentedViewController;
@@ -249,7 +258,7 @@ didFinishPickingMediaWithInfo:(NSDictionary<UIImagePickerControllerInfoKey, id> 
                                                 resultHandler:^(NSData *data, NSString *uti,
                                                                 UIImageOrientation o, NSDictionary *info2) {
         if (!data) return;
-        NSString *dir = @"/Library/CarPlayPlus/Wallpapers";
+        NSString *dir = CPJBPath(@"/Library/CarPlayPlus/Wallpapers");
         [[NSFileManager defaultManager] createDirectoryAtPath:dir
                                   withIntermediateDirectories:YES attributes:nil error:nil];
         NSString *ext = [uti.lowercaseString containsString:@"gif"] ? @"gif" : @"png";

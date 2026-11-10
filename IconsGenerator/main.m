@@ -20,8 +20,17 @@
 #import <sys/wait.h>
 #import <unistd.h>
 
+// Rootless-aware path helper: rootless jailbreaks (Dopamine / palera1n)
+// keep the system root read-only and expose jailbreak data under /var/jb.
+static NSString *CPJBPath(NSString *path) {
+    static NSString *jbRoot;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{ jbRoot = [[NSFileManager defaultManager] fileExistsAtPath:@"/var/jb"] ? @"/var/jb" : @""; });
+    return [jbRoot stringByAppendingString:path];
+}
+
 static NSString *const kCarBridgePrefs = @"/var/mobile/Library/Preferences/com.leftyfl1p.carbridge13.plist";
-static NSString *const kDestBase       = @"/Library/CarPlayPlus/invisibleIcon";
+static NSString *kDestBase(void) { return CPJBPath(@"/Library/CarPlayPlus/invisibleIcon"); }
 static NSString *const kBlindName      = @"\u2800";   // braille blank, renders as nothing
 static const NSUInteger kMaxIcons      = 20;
 
@@ -78,9 +87,10 @@ static NSArray<NSString *> *BridgedAppIdentifiers(void) {
 #pragma mark - Icon cache refresh
 
 static int RunUicache(void) {
-    const char *argv[] = {"/usr/bin/uicache", NULL};
+    const char *uicachePath = CPJBPath(@"/usr/bin/uicache").UTF8String;
+    const char *argv[] = {uicachePath, NULL};
     pid_t pid = 0;
-    if (posix_spawn(&pid, argv[0], NULL, NULL, argv, NULL) != 0) return -1;
+    if (posix_spawn(&pid, uicachePath, NULL, NULL, argv, NULL) != 0) return -1;
     int status = 0;
     waitpid(pid, &status, 0);
     return WEXITSTATUS(status);
@@ -113,10 +123,10 @@ int main(int argc, char **argv) {
         NSFileManager *fm = [NSFileManager defaultManager];
         NSError *error = nil;
 
-        [fm createDirectoryAtPath:kDestBase withIntermediateDirectories:YES
+        [fm createDirectoryAtPath:kDestBase() withIntermediateDirectories:YES
                         attributes:@{NSFilePosixPermissions: @0775} error:&error];
         if (error) {
-            printf("Error:failed to create %s (%s)\n", kDestBase.UTF8String,
+            printf("Error:failed to create %s (%s)\n", kDestBase().UTF8String,
                    error.localizedDescription.UTF8String ?: "unknown");
             return 1;
         }
@@ -134,7 +144,7 @@ int main(int argc, char **argv) {
             }
 
             NSString *destName = [NSString stringWithFormat:@"CarPlayPlusIcon%lu.app", (unsigned long)i];
-            NSString *dest = [kDestBase stringByAppendingPathComponent:destName];
+            NSString *dest = [kDestBase() stringByAppendingPathComponent:destName];
             [fm removeItemAtPath:dest error:nil];
 
             if (![fm copyItemAtPath:source toPath:dest error:&error]) {

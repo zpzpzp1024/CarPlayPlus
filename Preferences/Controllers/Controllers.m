@@ -12,6 +12,15 @@
 #import "Cells/Cells.h"
 #import "CPPrefsHelpers.h"
 
+// Rootless-aware path helper: rootless jailbreaks (Dopamine / palera1n)
+// keep the system root read-only and expose jailbreak data under /var/jb.
+static NSString *CPJBPath(NSString *path) {
+    static NSString *jbRoot;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{ jbRoot = [[NSFileManager defaultManager] fileExistsAtPath:@"/var/jb"] ? @"/var/jb" : @""; });
+    return [jbRoot stringByAppendingString:path];
+}
+
 #pragma mark - Base
 
 @interface CarPlayPlusBaseController : PSListController
@@ -53,14 +62,14 @@
     CPNotifyPrefsChanged();
     pid_t pid = 0;
     const char *argv[] = {"killall", "CarPlay", NULL};
-    posix_spawn(&pid, "/usr/bin/killall", NULL, NULL, (char *const *)argv, NULL);
+    posix_spawn(&pid, CPJBPath(@"/usr/bin/killall").UTF8String, NULL, NULL, (char *const *)argv, NULL);
 }
 
 - (void)respring {
     CPNotifyPrefsChanged();
     pid_t pid = 0;
     const char *argv[] = {"killall", "SpringBoard", NULL};
-    posix_spawn(&pid, "/usr/bin/killall", NULL, NULL, (char *const *)argv, NULL);
+    posix_spawn(&pid, CPJBPath(@"/usr/bin/killall").UTF8String, NULL, NULL, (char *const *)argv, NULL);
 }
 
 - (void)ResetSettings {
@@ -290,7 +299,7 @@
         @[@"/var/mobile/Library/SBHTML", @"SBHTML"],
         @[@"/var/mobile/Library/iWidgets", @"iWidgets"],
         @[@"/var/mobile/Library/Widgets/Universal", @"Universal"],
-        @[@"/Library/CarPlayPlus/Widgets/Controls", @"Controls"],
+        @[CPJBPath(@"/Library/CarPlayPlus/Widgets/Controls"), @"Controls"],
     ];
     NSFileManager *fm = [NSFileManager defaultManager];
     for (NSArray *pair in roots) {
@@ -317,7 +326,7 @@
     NSArray *widgets = [self.class discoverWidgets];
     if (!widgets.count) {
         UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"CarPlayPlus"
-            message:@"Widgets were not found. Drop a widget folder into\n/Library/CarPlayPlus/Widgets/ first."
+            message:[NSString stringWithFormat:@"Widgets were not found. Drop a widget folder into\n%@/Widgets/ first.", CPJBPath(@"/Library/CarPlayPlus")]
             preferredStyle:UIAlertControllerStyleAlert];
         [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
         [self presentViewController:alert animated:YES completion:nil];
@@ -417,7 +426,7 @@
 @property (nonatomic, strong) NSMutableArray *backups;   // {name, time, ...}
 @end
 
-static NSString *const kBackupRoot = @"/Library/CarPlayPlus/backup";
+static NSString *kBackupRoot(void) { return CPJBPath(@"/Library/CarPlayPlus/backup"); }
 
 @implementation CarPlayPlusBackupController
 
@@ -435,9 +444,9 @@ static NSString *const kBackupRoot = @"/Library/CarPlayPlus/backup";
 - (void)reloadBackups {
     NSFileManager *fm = [NSFileManager defaultManager];
     self.backups = [NSMutableArray array];
-    for (NSString *name in [fm contentsOfDirectoryAtPath:kBackupRoot error:nil]) {
+    for (NSString *name in [fm contentsOfDirectoryAtPath:kBackupRoot() error:nil]) {
         if ([name hasPrefix:@"."]) continue;
-        NSString *dir = [kBackupRoot stringByAppendingPathComponent:name];
+        NSString *dir = [kBackupRoot() stringByAppendingPathComponent:name];
         BOOL isDir = NO;
         if (![fm fileExistsAtPath:dir isDirectory:&isDir] || !isDir) continue;
         NSDictionary *meta = [NSDictionary dictionaryWithContentsOfFile:
@@ -464,13 +473,13 @@ static NSString *const kBackupRoot = @"/Library/CarPlayPlus/backup";
                 stringByReplacingOccurrencesOfString:@"/" withString:@"_"];
             if (!name.length) return;
             NSFileManager *fm = [NSFileManager defaultManager];
-            NSString *dir = [kBackupRoot stringByAppendingPathComponent:name];
+            NSString *dir = [kBackupRoot() stringByAppendingPathComponent:name];
             [fm createDirectoryAtPath:dir withIntermediateDirectories:YES attributes:nil error:nil];
             [fm copyItemAtPath:@"/var/mobile/Library/Preferences/xyz.carplayplus.tweak.plist"
                         toPath:[dir stringByAppendingPathComponent:@"tweak.plist"] error:nil];
             [fm copyItemAtPath:@"/var/mobile/Library/Preferences/xyz.carplayplus.data.plist"
                         toPath:[dir stringByAppendingPathComponent:@"data.plist"] error:nil];
-            [fm copyItemAtPath:@"/Library/CarPlayPlus/Preferences/carplay.plist"
+            [fm copyItemAtPath:CPJBPath(@"/Library/CarPlayPlus/Preferences/carplay.plist")
                         toPath:[dir stringByAppendingPathComponent:@"carplay.plist"] error:nil];
             NSDictionary *meta = @{@"time": @([NSDate date].timeIntervalSince1970)};
             [meta writeToFile:[dir stringByAppendingPathComponent:@"meta.plist"] atomically:YES];
@@ -500,7 +509,7 @@ static NSString *const kBackupRoot = @"/Library/CarPlayPlus/backup";
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
     [tableView deselectRowAtIndexPath:indexPath animated:YES];
     NSDictionary *item = self.backups[indexPath.row];
-    NSString *dir = [kBackupRoot stringByAppendingPathComponent:item[@"name"]];
+    NSString *dir = [kBackupRoot() stringByAppendingPathComponent:item[@"name"]];
     UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Restore"
         message:[NSString stringWithFormat:@"Restore \"%@\"?\nPreferences will be replaced.", item[@"name"]]
         preferredStyle:UIAlertControllerStyleAlert];
@@ -513,7 +522,7 @@ static NSString *const kBackupRoot = @"/Library/CarPlayPlus/backup";
             [fm copyItemAtPath:[dir stringByAppendingPathComponent:@"data.plist"]
                         toPath:@"/var/mobile/Library/Preferences/xyz.carplayplus.data.plist" error:nil];
             [fm copyItemAtPath:[dir stringByAppendingPathComponent:@"carplay.plist"]
-                        toPath:@"/Library/CarPlayPlus/Preferences/carplay.plist" error:nil];
+                        toPath:CPJBPath(@"/Library/CarPlayPlus/Preferences/carplay.plist") error:nil];
             CPNotifyPrefsChanged();
             UIAlertController *done = [UIAlertController alertControllerWithTitle:@"CarPlayPlus"
                 message:@"Backup restored successfully.\nMust be respringed for changes to take effect."
@@ -521,7 +530,7 @@ static NSString *const kBackupRoot = @"/Library/CarPlayPlus/backup";
             [done addAction:[UIAlertAction actionWithTitle:@"Respring" style:UIAlertActionStyleDefault
                 handler:^(UIAlertAction *x) {
                     pid_t pid = 0; const char *argv[] = {"killall", "SpringBoard", NULL};
-                    posix_spawn(&pid, "/usr/bin/killall", NULL, NULL, (char *const *)argv, NULL);
+                    posix_spawn(&pid, CPJBPath(@"/usr/bin/killall").UTF8String, NULL, NULL, (char *const *)argv, NULL);
                 }]];
             [self presentViewController:done animated:YES completion:nil];
         }]];
@@ -533,7 +542,7 @@ static NSString *const kBackupRoot = @"/Library/CarPlayPlus/backup";
     NSDictionary *item = self.backups[indexPath.row];
     UIContextualAction *del = [UIContextualAction contextualActionWithStyle:UIContextualActionStyleDestructive
         title:@"Delete" handler:^(UIContextualAction *a, UIView *v, void (^done)(BOOL)) {
-            NSString *dir = [kBackupRoot stringByAppendingPathComponent:item[@"name"]];
+            NSString *dir = [kBackupRoot() stringByAppendingPathComponent:item[@"name"]];
             [[NSFileManager defaultManager] removeItemAtPath:dir error:nil];
             [self reloadBackups];
             done(YES);
