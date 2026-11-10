@@ -850,11 +850,13 @@ allowingReadAccessToURL:[NSURL fileURLWithPath:dir]];
     if (boolPref(kAPI_Music, YES)) {
         // MediaRemote is a private framework; resolve the entry point at
         // runtime so the tweak can be linked against SDKs without its .tbd.
-        static void (*MRMediaRemoteGetNowPlayingInfoPtr)(dispatch_queue_t, void (^)(NSDictionary *)) = NULL;
+        typedef void (^CPMRRemoteCompletion)(NSDictionary *);
+        typedef void (*CPMRRemoteGetNowPlayingInfoFn)(dispatch_queue_t, CPMRRemoteCompletion);
+        static CPMRRemoteGetNowPlayingInfoFn MRMediaRemoteGetNowPlayingInfoPtr = NULL;
         static dispatch_once_t cpMROnce;
         dispatch_once(&cpMROnce, ^{
             void *mr = dlopen("/System/Library/PrivateFrameworks/MediaRemote.framework/MediaRemote", RTLD_NOW);
-            if (mr) MRMediaRemoteGetNowPlayingInfoPtr = dlsym(mr, "MRMediaRemoteGetNowPlayingInfo");
+            if (mr) MRMediaRemoteGetNowPlayingInfoPtr = (CPMRRemoteGetNowPlayingInfoFn)dlsym(mr, "MRMediaRemoteGetNowPlayingInfo");
         });
         __block NSDictionary *now = nil;
         if (MRMediaRemoteGetNowPlayingInfoPtr)
