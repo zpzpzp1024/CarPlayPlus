@@ -374,7 +374,7 @@
 }
 
 - (void)LoadApps {
-    LSApplicationWorkspace *ws = [NSClassFromString(@"LSApplicationWorkspace") performSelector:@selector(defaultWorkspace)];
+    id ws = [NSClassFromString(@"LSApplicationWorkspace") performSelector:@selector(defaultWorkspace)];
     NSArray *apps = [ws performSelector:@selector(allApplications)];
     NSMutableArray *list = [NSMutableArray array];
     for (id proxy in apps) {
