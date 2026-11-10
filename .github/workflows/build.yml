@@ -127,7 +127,7 @@ jobs:
       # ------------------------------------------------------------
       - name: Preflight logos syntax
         run: |
-          perl "$THEOS/bin/logos.pl" < Tweak/CarPlayPlus.xm > /dev/null
+          perl "$THEOS/bin/logos.pl" Tweak/CarPlayPlus.xm > /dev/null
           echo "logos preflight OK"
 
       - name: Build package
