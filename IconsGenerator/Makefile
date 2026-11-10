@@ -10,6 +10,11 @@ CarPlayPlusIconsGenerator_CFLAGS = -fobjc-arc -w
 CarPlayPlusIconsGenerator_FRAMEWORKS = Foundation CoreFoundation MobileCoreServices
 CarPlayPlusIconsGenerator_INSTALL_PATH = /usr/bin
 
+# On Linux (Theos CI) force clang to use ld64.lld for Mach-O linking.
+ifneq ($(shell test -x /usr/bin/ld64.lld && echo yes),)
+CarPlayPlusIconsGenerator_LDFLAGS += -fuse-ld=/usr/bin/ld64.lld
+endif
+
 include $(THEOS_MAKE_PATH)/tool.mk
 
 # The generator writes under /Library/CarPlayPlus and runs `/usr/bin/uicache`,
