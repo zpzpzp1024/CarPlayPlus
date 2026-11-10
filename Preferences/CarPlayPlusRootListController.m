@@ -4,7 +4,6 @@
 //
 
 #import "CarPlayPlusRootListController.h"
-#import <Cephei/HBPreferences.h>
 #import <MessageUI/MessageUI.h>
 #import <spawn.h>
 #import <notify.h>

@@ -4,18 +4,17 @@
 //
 
 #import <Preferences/PSSpecifier.h>
-#import <Cephei/HBPreferences.h>
-#import <CepheiPrefs/HBListController.h>
 #import <notify.h>
 #import <spawn.h>
 #import <objc/runtime.h>
 
 #import "CarPlayPlusRootListController.h"
 #import "Cells/Cells.h"
+#import "CPPrefsHelpers.h"
 
 #pragma mark - Base
 
-@interface CarPlayPlusBaseController : HBListController
+@interface CarPlayPlusBaseController : PSListController
 @end
 
 @implementation CarPlayPlusBaseController
@@ -28,8 +27,7 @@
 - (id)readPreferenceValue:(PSSpecifier *)specifier {
     NSString *key = specifier.properties[@"key"];
     if (!key.length) return nil;
-    HBPreferences *prefs = [[HBPreferences alloc] initWithIdentifier:CPPrefsIdentifier];
-    id val = [prefs objectForKey:key];
+    id val = CPPrefAnyGet(CPPrefsIdentifier, key);
     if (!val) val = specifier.properties[@"default"];
     return val;
 }
@@ -37,8 +35,7 @@
 - (void)setPreferenceValue:(id)value specifier:(PSSpecifier *)specifier {
     NSString *key = specifier.properties[@"key"];
     if (!key.length) return;
-    HBPreferences *prefs = [[HBPreferences alloc] initWithIdentifier:CPPrefsIdentifier];
-    [prefs setObject:value forKey:key];
+    CPPrefAnySet(CPPrefsIdentifier, key, value);
     CPNotifyPrefsChanged();
 }
 
@@ -73,9 +70,9 @@
     [alert addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
     [alert addAction:[UIAlertAction actionWithTitle:@"Reset" style:UIAlertActionStyleDestructive
         handler:^(UIAlertAction *a) {
-            HBPreferences *prefs = [[HBPreferences alloc] initWithIdentifier:CPPrefsIdentifier];
-            NSDictionary *all = prefs.dictionaryRepresentation;
-            for (NSString *k in all.allKeys) [prefs removeObjectForKey:k];
+            NSDictionary *all = [NSDictionary dictionaryWithContentsOfFile:
+                @"/var/mobile/Library/Preferences/xyz.carplayplus.tweak.plist"];
+            for (NSString *k in all.allKeys) CPPrefAnyRemove(CPPrefsIdentifier, k);
             [[NSFileManager defaultManager] removeItemAtPath:
                 @"/var/mobile/Library/Preferences/xyz.carplayplus.tweak.plist" error:nil];
             [self respring];
@@ -107,21 +104,19 @@
 }
 
 - (void)ResetIconLayout {
-    HBPreferences *prefs = [[HBPreferences alloc] initWithIdentifier:CPPrefsIdentifier];
     NSArray *keys = @[@"kRows", @"kColumns", @"kIconSize", @"kTop_inset", @"kBottom_inset",
                       @"kLeft_inset", @"kRight_inset", @"kHideLabel", @"kHideLabelback",
                       @"kDots", @"klblColor"];
     [keys enumerateObjectsUsingBlock:^(NSString *k, NSUInteger i, BOOL *stop) {
-        [prefs removeObjectForKey:k];
+        CPPrefAnyRemove(CPPrefsIdentifier, k);
     }];
     CPNotifyPrefsChanged();
     notify_post("xyz.carplayplus.iconLayouChanged");
 }
 
 - (void)CreateIcons {
-    NSInteger count = [[[HBPreferences alloc] initWithIdentifier:CPPrefsIdentifier]
-        objectForKey:@"kVicon"] ? [[[HBPreferences alloc] initWithIdentifier:CPPrefsIdentifier]
-        objectForKey:@"kVicon"] integerValue] : 0;
+    NSNumber *vicon = CPPrefAnyGet(CPPrefsIdentifier, @"kVicon");
+    NSInteger count = vicon ? vicon.integerValue : 0;
     if (count <= 0) {
         UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"CarPlayPlus"
             message:@"Set the number of icons first (1–20)." preferredStyle:UIAlertControllerStyleAlert];
@@ -167,8 +162,7 @@
 }
 
 - (void)ResetWallpaper {
-    HBPreferences *prefs = [[HBPreferences alloc] initWithIdentifier:CPPrefsIdentifier];
-    [prefs removeObjectForKey:@"kWallpaper"];
+    CPPrefAnyRemove(CPPrefsIdentifier, @"kWallpaper");
     CPNotifyPrefsChanged();
     notify_post("xyz.carplayplus.changedImg");
 }
@@ -240,13 +234,12 @@
 }
 
 - (void)ResetStatusBar {
-    HBPreferences *prefs = [[HBPreferences alloc] initWithIdentifier:CPPrefsIdentifier];
     NSArray *keys = @[@"kStatusBar", @"kOrienation", @"kShowDate", @"kDateFormat",
                       @"kLocation", @"kFontSize", @"kPosDate", @"kWeather_icon",
                       @"kWeather_temperature", @"kPosWeather", @"kdevice_icon",
                       @"kBattery", @"kRemoveBattery"];
     [keys enumerateObjectsUsingBlock:^(NSString *k, NSUInteger i, BOOL *stop) {
-        [prefs removeObjectForKey:k];
+        CPPrefAnyRemove(CPPrefsIdentifier, k);
     }];
     CPNotifyPrefsChanged();
 }
@@ -269,11 +262,10 @@
 }
 
 - (void)ResetColor {
-    HBPreferences *prefs = [[HBPreferences alloc] initWithIdentifier:CPPrefsIdentifier];
     [@[@"kEnaTimeColor", @"kTimeColor", @"kCarrierColor",
        @"kEnaWifiColor", @"kWifiColor", @"kEnaLteColor", @"kLTEOnColor", @"kLTEOffColor"]
         enumerateObjectsUsingBlock:^(NSString *k, NSUInteger i, BOOL *stop) {
-            [prefs removeObjectForKey:k];
+            CPPrefAnyRemove(CPPrefsIdentifier, k);
     }];
     CPNotifyPrefsChanged();
 }
@@ -345,9 +337,8 @@
 }
 
 - (void)addWidgetEntry:(NSDictionary *)widget {
-    HBPreferences *prefs = [[HBPreferences alloc] initWithIdentifier:CPPrefsIdentifier];
     NSMutableArray *active = [NSMutableArray arrayWithArray:
-        (id)[prefs objectForKey:@"kActiveWidgets"] ?: @[]];
+        (id)CPPrefAnyGet(CPPrefsIdentifier, @"kActiveWidgets") ?: @[]];
     NSMutableDictionary *entry = [widget mutableCopy];
     CGFloat side = [UIScreen mainScreen].bounds.size.width;
     entry[@"PosX"] = @(0);
@@ -357,7 +348,7 @@
     entry[@"zoom_lbl"] = @1.0;
     entry[@"pageIndex"] = @0;
     [active addObject:entry];
-    [prefs setObject:active forKey:@"kActiveWidgets"];
+    CPPrefAnySet(CPPrefsIdentifier, @"kActiveWidgets", active);
     CPNotifyPrefsChanged();
     notify_post("xyz.carplayplus/updateWidgets");
 }
@@ -373,7 +364,6 @@
 
 @interface CarPlayPlusOtherController : CarPlayPlusBaseController <UITableViewDataSource, UITableViewDelegate>
 @property (nonatomic, strong) NSMutableArray *selectedApps;
-@property (nonatomic, strong) HBPreferences *prefs;
 @end
 
 @implementation CarPlayPlusOtherController
@@ -396,8 +386,8 @@
     [list sortUsingComparator:^NSComparisonResult(NSDictionary *a, NSDictionary *b) {
         return [a[@"name"] compare:b[@"name"]];
     }];
-    self.prefs = [[HBPreferences alloc] initWithIdentifier:CPPrefsIdentifier];
-    self.selectedApps = [NSMutableArray arrayWithArray:(id)[self.prefs objectForKey:@"kFullApps"] ?: @[]];
+    self.selectedApps = [NSMutableArray arrayWithArray:
+        (id)CPPrefAnyGet(CPPrefsIdentifier, @"kFullApps") ?: @[]];
 
     UIAlertController *sheet = [UIAlertController alertControllerWithTitle:@"Fullscreen Apps"
         message:@"Select applications to open in full screen on your CarPlay." preferredStyle:UIAlertControllerStyleActionSheet];
@@ -406,12 +396,12 @@
                            [self.selectedApps containsObject:app[@"id"]] ? @"✓" : @""];
         [sheet addAction:[UIAlertAction actionWithTitle:title style:UIAlertActionStyleDefault
             handler:^(UIAlertAction *a) {
-                if ([self.selectedApps containsObject:app[@"id"]])
-                    [self.selectedApps removeObject:app[@"id"]];
-                else
-                    [self.selectedApps addObject:app[@"id"]];
-                [self.prefs setObject:self.selectedApps forKey:@"kFullApps"];
-                CPNotifyPrefsChanged();
+                 if ([self.selectedApps containsObject:app[@"id"]])
+                     [self.selectedApps removeObject:app[@"id"]];
+                 else
+                     [self.selectedApps addObject:app[@"id"]];
+                 CPPrefAnySet(CPPrefsIdentifier, @"kFullApps", self.selectedApps);
+                 CPNotifyPrefsChanged();
             }]];
     }
     [sheet addAction:[UIAlertAction actionWithTitle:@"Done" style:UIAlertActionStyleCancel handler:nil]];

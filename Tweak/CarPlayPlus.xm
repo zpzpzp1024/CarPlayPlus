@@ -28,19 +28,14 @@
 #import <SystemConfiguration/CaptiveNetwork.h>
 
 #import <substrate.h>
-#import <Cephei/HBPreferences.h>
 
+#import "CPPreferences.h"
 #import "PrivateHeaders.h"
 #import "CarPlayPlusAnimatedImage.h"
 
 // ---------------------------------------------------------------------------
 #pragma mark - Preferences
 // ---------------------------------------------------------------------------
-
-static NSString *const kPrefsDomain   = @"xyz.carplayplus.tweak";
-static NSString *const kDataDomain    = @"xyz.carplayplus.data";
-
-static HBPreferences *gPrefs;
 
 // preference keys (mirror the reconstructed upstream feature set)
 static NSString *const kEnabled          = @"kEnabled";
@@ -98,25 +93,23 @@ static NSString *const kPageType         = @"kPageType";
 static const int kMaxWallpapers = 5;
 
 static BOOL gEnabled(void) {
-    return [[gPrefs objectForKey:kEnabled] boolValue];
+    return CPPrefsBoolForKey(kEnabled, YES);
 }
 
 static NSInteger intPref(NSString *key, NSInteger def) {
-    id v = [gPrefs objectForKey:key];
-    return v ? [v integerValue] : def;
+    return CPPrefsIntegerForKey(key, def);
 }
 
 static CGFloat cgPref(NSString *key, CGFloat def) {
-    return (CGFloat)intPref(key, (NSInteger)def);
+    return CPPrefsCGFloatForKey(key, def);
 }
 
 static BOOL boolPref(NSString *key, BOOL def) {
-    id v = [gPrefs objectForKey:key];
-    return v ? [v boolValue] : def;
+    return CPPrefsBoolForKey(key, def);
 }
 
 static UIColor *CPColorFromPref(NSString *key, NSString *fallbackHex) {
-    NSString *hex = [gPrefs objectForKey:key] ?: fallbackHex;
+    NSString *hex = CPPrefsStringForKey(key, fallbackHex);
     if (!hex.length) return nil;
     hex = [hex stringByReplacingOccurrencesOfString:@"#" withString:@""];
     unsigned val = 0;
@@ -354,7 +347,7 @@ static void ApplyLabelStyleToIconView(UIView *iconView) {
     if ([iconView respondsToSelector:@selector(labelLegibilityView)])
         iconView.labelLegibilityView.hidden = boolPref(kHideLabelback, YES);
     UIColor *lblColor = [UIColor whiteColor];
-    NSString *hex = [gPrefs objectForKey:klblColor] ?: @"FFFFFF";
+    NSString *hex = CPPrefsStringForKey(klblColor, @"FFFFFF");
     unsigned val = 0;
     NSScanner *sc = [NSScanner scannerWithString:hex];
     if ([sc scanHexInt:&val]) lblColor = [UIColor colorWithRed:((val>>16)&0xFF)/255.0
@@ -411,10 +404,10 @@ static void ApplyLayoutToAll(void) {
 }
 
 - (NSString *)selectedPath {
-    NSString *path = [gPrefs objectForKey:kWallpaper];
+    NSString *path = CPPrefsStringForKey(kWallpaper, nil);
     if (path && [[NSFileManager defaultManager] fileExistsAtPath:path]) return path;
     for (NSInteger i = 0; i < kMaxWallpapers; i++) {
-        NSString *p = [gPrefs objectForKey:[NSString stringWithFormat:@"%@%ld", kWallpaperPrefix, (long)i]];
+        NSString *p = CPPrefsStringForKey([NSString stringWithFormat:@"%@%ld", kWallpaperPrefix, (long)i], nil);
         if (p && [[NSFileManager defaultManager] fileExistsAtPath:p]) return p;
     }
     return nil;
@@ -495,12 +488,12 @@ static void ApplyLayoutToAll(void) {
 - (void)slideshowTick {
     NSMutableArray *paths = [NSMutableArray array];
     for (NSInteger i = 0; i < kMaxWallpapers; i++) {
-        NSString *p = [gPrefs objectForKey:[NSString stringWithFormat:@"%@%ld", kWallpaperPrefix, (long)i]];
+        NSString *p = CPPrefsStringForKey([NSString stringWithFormat:@"%@%ld", kWallpaperPrefix, (long)i], nil);
         if (p && [[NSFileManager defaultManager] fileExistsAtPath:p]) [paths addObject:p];
     }
     if (!paths.count) return;
     self.currentIndex = (self.currentIndex + 1) % paths.count;
-    [gPrefs setObject:paths[self.currentIndex] forKey:kWallpaper];
+    CPPrefsSetObject(kWallpaper, paths[self.currentIndex]);
     [[NSNotificationCenter defaultCenter] postNotificationName:kChangedImg object:self];
 }
 
@@ -573,8 +566,8 @@ static void ApplyLayoutToAll(void) {
 }
 
 - (NSString *)formattedDate {
-    NSString *fmt = [gPrefs objectForKey:kDateFormat] ?: @"EE,MMM d";
-    NSString *loc = [gPrefs objectForKey:kLocation] ?: @"en_US_POSIX";
+    NSString *fmt = CPPrefsStringForKey(kDateFormat, @"EE,MMM d");
+    NSString *loc = CPPrefsStringForKey(kLocation, @"en_US_POSIX");
     fmt = [fmt stringByReplacingOccurrencesOfString:@"@" withString:@"\n"];
     NSDateFormatter *df = [NSDateFormatter new];
     df.locale = [NSLocale localeWithLocaleIdentifier:loc];
@@ -763,7 +756,7 @@ static void hook_BKSDisplayServicesSetScreenBlanked(int blanked) {
 }
 
 - (NSArray *)activeWidgetBundles {
-    id active = [gPrefs objectForKey:kActiveWidgets];
+    id active = CPPrefsObjectForKey(kActiveWidgets);
     return [active isKindOfClass:[NSArray class]] ? active : @[];
 }
 
@@ -936,7 +929,6 @@ static void OnIconLayoutChanged(NSNotification *note) {
 }
 
 static void OnPrefsChanged(NSNotification *note) {
-    [gPrefs reload];
     if (gWidgetWindow) [gWidgetWindow updateWidgets];
     if (boolPref(kWallEnabled, NO)) {
         UIWindow *w = [UIApplication sharedApplication].keyWindow;
@@ -948,8 +940,7 @@ static void OnPrefsChanged(NSNotification *note) {
 }
 
 %ctor {
-    gPrefs = [[HBPreferences alloc] initWithIdentifier:kPrefsDomain];
-    [gPrefs registerDefaults:@{
+    CPPrefsRegisterDefaults(@{
         kEnabled: @YES,
         kDimming: @0,
         kRows: @3, kColumns: @5, kIconSize: @40,
@@ -963,7 +954,6 @@ static void OnPrefsChanged(NSNotification *note) {
         kFull_size: @30, kFullBtn_x: @14, kFullBtn_y: @14,
         kRemoveSplash: @NO,
     }];
-    [gPrefs reload];
 
     // BKS screen-blank hook
     void *bks = dlopen("/System/Library/PrivateFrameworks/BackBoardServices.framework/BackBoardServices", RTLD_NOW);

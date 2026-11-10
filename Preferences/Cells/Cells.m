@@ -5,7 +5,7 @@
 
 #import "Cells.h"
 #import "CarPlayPlusRootListController.h"
-#import <Cephei/HBPreferences.h>
+#import "CPPrefsHelpers.h"
 #import <Photos/Photos.h>
 #import <objc/runtime.h>
 
@@ -127,8 +127,7 @@ static UIViewController *CPTopViewController(void) {
         PSSpecifier *spec = self.specifier;
         NSString *key = spec.properties[@"key"];
         if (key.length) {
-            HBPreferences *p = [[HBPreferences alloc] initWithIdentifier:CPPrefsIdentifier];
-            [p setObject:hex forKey:key];
+            CPPrefAnySet(CPPrefsIdentifier, key, hex);
             CPNotifyPrefsChanged();
         }
     }
@@ -257,8 +256,7 @@ didFinishPickingMediaWithInfo:(NSDictionary<UIImagePickerControllerInfoKey, id> 
         NSString *path = [dir stringByAppendingPathComponent:
             [NSString stringWithFormat:@"wp_%.0f.%@", [NSDate date].timeIntervalSince1970, ext]];
         if (![data writeToFile:path atomically:YES]) return;
-        HBPreferences *p = [[HBPreferences alloc] initWithIdentifier:CPPrefsIdentifier];
-        [p setObject:path forKey:self.targetKey];
+        CPPrefAnySet(CPPrefsIdentifier, self.targetKey, path);
         CPNotifyPrefsChanged();
     }];
 }
@@ -287,10 +285,8 @@ didFinishPickingMediaWithInfo:(NSDictionary<UIImagePickerControllerInfoKey, id> 
 
 - (void)setValue:(id)value specifier:(PSSpecifier *)specifier {
     self.selectedStr = [value description];
-    if ([specifier.properties[@"key"] isKindOfClass:[NSString class]]) {
-        HBPreferences *p = [[HBPreferences alloc] initWithIdentifier:CPPrefsIdentifier];
-        [p setObject:value forKey:specifier.properties[@"key"]];
-    }
+    if ([specifier.properties[@"key"] isKindOfClass:[NSString class]])
+        CPPrefAnySet(CPPrefsIdentifier, specifier.properties[@"key"], value);
     [self buildUI];
     CPNotifyPrefsChanged();
 }

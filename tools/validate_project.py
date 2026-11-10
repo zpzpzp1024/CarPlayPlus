@@ -142,6 +142,16 @@ for line in subproj:
             error(f"[subproject] Makefile references missing dir `{name}/`")
 
 # --------------------------------------------------------------------------
+# 8. Makefiles must stay self-contained (no external frameworks such as Cephei)
+# --------------------------------------------------------------------------
+banned = ("Cephei", "ws.hbang.common", "-F/Library/")
+for mk in list(ROOT.glob("**/Makefile")):
+    text = mk.read_text(encoding="utf-8", errors="replace")
+    for b in banned:
+        if b in text:
+            error(f"[makefile] {mk.relative_to(ROOT)} references external dependency `{b}`")
+
+# --------------------------------------------------------------------------
 print("=" * 60)
 if ERRORS:
     for e in ERRORS:

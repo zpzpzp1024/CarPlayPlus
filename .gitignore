@@ -1,0 +1,16 @@
+# Reverse-engineering scratch data (not part of the source project)
+work/
+
+# Theos build output
+.theos/
+.package/
+
+# Debian packages
+*.deb
+
+# Local build drops
+build/out/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
