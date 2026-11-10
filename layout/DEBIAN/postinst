@@ -1,0 +1,19 @@
+#!/bin/sh
+# CarPlayPlus postinst — prepare writable data directories on rootful devices.
+
+DIR=/Library/CarPlayPlus
+if [ -d "$DIR" ]; then
+    mkdir -p "$DIR/Wallpapers" "$DIR/backup" "$DIR/Preferences" "$DIR/Widgets"
+    chown -R mobile:mobile "$DIR/Wallpapers" "$DIR/backup" "$DIR/Preferences" "$DIR/Widgets" 2>/dev/null
+    chmod -R 0775 "$DIR/Wallpapers" "$DIR/backup" "$DIR/Preferences" "$DIR/Widgets" 2>/dev/null
+fi
+
+# Same for rootless installs (/var/jb prefixed already by the package manager).
+DIR2=/var/jb/Library/CarPlayPlus
+if [ -d "$DIR2" ]; then
+    mkdir -p "$DIR2/Wallpapers" "$DIR2/backup" "$DIR2/Preferences" "$DIR2/Widgets"
+    chown -R mobile:mobile "$DIR2/Wallpapers" "$DIR2/backup" "$DIR2/Preferences" "$DIR2/Widgets" 2>/dev/null
+    chmod -R 0775 "$DIR2/Wallpapers" "$DIR2/backup" "$DIR2/Preferences" "$DIR2/Widgets" 2>/dev/null
+fi
+
+exit 0

@@ -1,0 +1,319 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>items</key>
+	<array>
+		<!-- Transparent icons -->
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
+			<string>Generate transparent icon</string>
+			<key>footerText</key>
+			<string>Creates invisible placeholder apps that can be arranged on the CarPlay dashboard. Requires Carbridge bridged apps (or add them in Other Functions).</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSTableCell</string>
+			<key>cellClass</key>
+			<string>CarPlayPlusStepperCell</string>
+			<key>default</key>
+			<integer>0</integer>
+			<key>defaults</key>
+			<string>xyz.carplayplus.tweak</string>
+			<key>key</key>
+			<string>kVicon</string>
+			<key>label</key>
+			<string>The number of icons: %i</string>
+			<key>min</key>
+			<integer>0</integer>
+			<key>max</key>
+			<integer>20</integer>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSButtonCell</string>
+			<key>action</key>
+			<string>CreateIcons</string>
+			<key>alignment</key>
+			<integer>2</integer>
+			<key>label</key>
+			<string>Create Blank Icons</string>
+		</dict>
+		<dict>
+			<key>action</key>
+			<string>OpenCarPlay</string>
+			<key>cell</key>
+			<string>PSLinkCell</string>
+			<key>label</key>
+			<string>CarPlay Settings</string>
+		</dict>
+
+		<!-- Rows -->
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
+			<string>Number of CarPlay dashboard app rows</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSSegmentCell</string>
+			<key>default</key>
+			<integer>3</integer>
+			<key>defaults</key>
+			<string>xyz.carplayplus.tweak</string>
+			<key>key</key>
+			<string>kRows</string>
+			<key>validValues</key>
+			<array>
+				<integer>2</integer>
+				<integer>3</integer>
+				<integer>4</integer>
+			</array>
+			<key>validTitles</key>
+			<array>
+				<string>2</string>
+				<string>3</string>
+				<string>4</string>
+			</array>
+		</dict>
+
+		<!-- Columns -->
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
+			<string>Number of CarPlay dashboard app columns</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSSegmentCell</string>
+			<key>default</key>
+			<integer>5</integer>
+			<key>defaults</key>
+			<string>xyz.carplayplus.tweak</string>
+			<key>key</key>
+			<string>kColumns</string>
+			<key>validValues</key>
+			<array>
+				<integer>4</integer>
+				<integer>5</integer>
+				<integer>6</integer>
+			</array>
+			<key>validTitles</key>
+			<array>
+				<string>4</string>
+				<string>5</string>
+				<string>6</string>
+			</array>
+		</dict>
+
+		<!-- Icon size -->
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
+			<string>CarPlay dashboard app icon size</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSSliderCell</string>
+			<key>cellClass</key>
+			<string>CarPlayPlusSliderCell</string>
+			<key>default</key>
+			<integer>40</integer>
+			<key>defaults</key>
+			<string>xyz.carplayplus.tweak</string>
+			<key>key</key>
+			<string>kIconSize</string>
+			<key>min</key>
+			<integer>20</integer>
+			<key>max</key>
+			<integer>70</integer>
+		</dict>
+
+		<!-- Top offset -->
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
+			<string>CarPlay dashboard app icon Top offset</string>
+			<key>footerText</key>
+			<string>Default Top Offset = 30</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSSliderCell</string>
+			<key>cellClass</key>
+			<string>CarPlayPlusSliderCell</string>
+			<key>default</key>
+			<integer>30</integer>
+			<key>defaults</key>
+			<string>xyz.carplayplus.tweak</string>
+			<key>key</key>
+			<string>kTop_inset</string>
+			<key>min</key>
+			<integer>0</integer>
+			<key>max</key>
+			<integer>150</integer>
+		</dict>
+
+		<!-- Bottom offset -->
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
+			<string>CarPlay dashboard app icon Bottom offset</string>
+			<key>footerText</key>
+			<string>Default Bottom Offset = -30</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSSliderCell</string>
+			<key>cellClass</key>
+			<string>CarPlayPlusSliderCell</string>
+			<key>default</key>
+			<integer>-30</integer>
+			<key>defaults</key>
+			<string>xyz.carplayplus.tweak</string>
+			<key>key</key>
+			<string>kBottom_inset</string>
+			<key>min</key>
+			<integer>-70</integer>
+			<key>max</key>
+			<integer>50</integer>
+		</dict>
+
+		<!-- Left offset -->
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
+			<string>CarPlay dashboard app icon Left offset</string>
+			<key>footerText</key>
+			<string>Default Left Offset = 20</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSSliderCell</string>
+			<key>cellClass</key>
+			<string>CarPlayPlusSliderCell</string>
+			<key>default</key>
+			<integer>20</integer>
+			<key>defaults</key>
+			<string>xyz.carplayplus.tweak</string>
+			<key>key</key>
+			<string>kLeft_inset</string>
+			<key>min</key>
+			<integer>0</integer>
+			<key>max</key>
+			<integer>200</integer>
+		</dict>
+
+		<!-- Right offset -->
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
+			<string>CarPlay dashboard app icon Right offset</string>
+			<key>footerText</key>
+			<string>Default Right Offset = 20</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSSliderCell</string>
+			<key>cellClass</key>
+			<string>CarPlayPlusSliderCell</string>
+			<key>default</key>
+			<integer>20</integer>
+			<key>defaults</key>
+			<string>xyz.carplayplus.tweak</string>
+			<key>key</key>
+			<string>kRight_inset</string>
+			<key>min</key>
+			<integer>0</integer>
+			<key>max</key>
+			<integer>200</integer>
+		</dict>
+
+		<!-- Label customize -->
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
+			<string>CarPlay App Label customize</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<true/>
+			<key>defaults</key>
+			<string>xyz.carplayplus.tweak</string>
+			<key>key</key>
+			<string>kHideLabel</string>
+			<key>label</key>
+			<string>Hide Icon Label</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<true/>
+			<key>defaults</key>
+			<string>xyz.carplayplus.tweak</string>
+			<key>key</key>
+			<string>kHideLabelback</string>
+			<key>label</key>
+			<string>Hide Label Background</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSTableCell</string>
+			<key>cellClass</key>
+			<string>AColorPicker</string>
+			<key>fallback</key>
+			<string>FFFFFF</string>
+			<key>key</key>
+			<string>klblColor</string>
+			<key>supportAlpha</key>
+			<true/>
+			<key>defaults</key>
+			<string>xyz.carplayplus.tweak</string>
+			<key>label</key>
+			<string>Icon Label Color</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<true/>
+			<key>defaults</key>
+			<string>xyz.carplayplus.tweak</string>
+			<key>key</key>
+			<string>kDots</string>
+			<key>label</key>
+			<string>Hide Dots</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSButtonCell</string>
+			<key>action</key>
+			<string>ResetIconLayout</string>
+			<key>context</key>
+			<dict>
+				<key>action</key>
+				<string>ResetIconLayout</string>
+			</dict>
+			<key>alignment</key>
+			<integer>1</integer>
+			<key>label</key>
+			<string>Reset Icon Layout</string>
+		</dict>
+	</array>
+	<key>title</key>
+	<string>Icon Layout</string>
+</dict>
+</plist>

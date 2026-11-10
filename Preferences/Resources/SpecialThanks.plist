@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>items</key>
+	<array>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
+			<string>Credits</string>
+			<key>footerText</key>
+			<string>CarPlayPlus — a from-scratch, modern re-implementation of the Airaw CarPlay tweak, reconstructed from static analysis.</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSLinkCell</string>
+			<key>action</key>
+			<string>openURL:</string>
+			<key>label</key>
+			<string>Project Repository</string>
+			<key>url</key>
+			<string>https://github.com</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSLinkCell</string>
+			<key>action</key>
+			<string>openURL:</string>
+			<key>label</key>
+			<string>NSDateFormatter Reference</string>
+			<key>url</key>
+			<string>https://nsdateformatter.com/</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
+			<string>Acknowledgements</string>
+			<key>footerText</key>
+			<string>Icon layout, GIF wallpapers, status bar and HTML widgets were inspired by the Airaw tweak (© Dcsyhi). This project contains no upstream code.</string>
+		</dict>
+	</array>
+	<key>title</key>
+	<string>Special Thanks</string>
+</dict>
+</plist>

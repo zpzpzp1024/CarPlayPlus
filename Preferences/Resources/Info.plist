@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>English</string>
+	<key>CFBundleExecutable</key>
+	<string>CarPlayPlus</string>
+	<key>CFBundleIdentifier</key>
+	<string>xyz.carplayplus.prefs</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>CarPlayPlus</string>
+	<key>CFBundlePackageType</key>
+	<string>BNDL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0.0</string>
+	<key>CFBundleSignature</key>
+	<string>????</string>
+	<key>CFBundleVersion</key>
+	<string>1.0.0</string>
+	<key>NSPrincipalClass</key>
+	<string>CarPlayPlusRootListController</string>
+	<key>MinimumOSVersion</key>
+	<string>14.0</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Choose a wallpaper image or animated GIF for your CarPlay home screen.</string>
+</dict>
+</plist>

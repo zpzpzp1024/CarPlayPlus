@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>items</key>
+	<array>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
+			<string>Enable / Disable</string>
+			<key>footerText</key>
+			<string>Replaces the CarPlay home wallpaper. GIF files are animated automatically.</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<false/>
+			<key>defaults</key>
+			<string>xyz.carplayplus.tweak</string>
+			<key>key</key>
+			<string>kWallEnabled</string>
+			<key>label</key>
+			<string>Enabled</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
+			<string>Wallpaper image</string>
+			<key>footerText</key>
+			<string>PNG, JPG or animated GIF picked from the photo library. Stored at /Library/CarPlayPlus/Wallpapers.</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSTableCell</string>
+			<key>cellClass</key>
+			<string>CarPlayPlusImagePickerCell</string>
+			<key>action</key>
+			<string>userDidSelect</string>
+			<key>key</key>
+			<string>kWallpaper</string>
+			<key>label</key>
+			<string>Pick Wallpaper Image / GIF</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
+			<string>Adjustments</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSSliderCell</string>
+			<key>cellClass</key>
+			<string>CarPlayPlusSliderCell</string>
+			<key>default</key>
+			<integer>0</integer>
+			<key>defaults</key>
+			<string>xyz.carplayplus.tweak</string>
+			<key>key</key>
+			<string>kDimming</string>
+			<key>max</key>
+			<integer>100</integer>
+			<key>min</key>
+			<integer>0</integer>
+			<key>label</key>
+			<string>Dimming (%)</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<false/>
+			<key>defaults</key>
+			<string>xyz.carplayplus.tweak</string>
+			<key>key</key>
+			<string>kWallpaperMotion</string>
+			<key>label</key>
+			<string>Parallax Motion Effect</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
+			<string>Apply</string>
+			<key>footerText</key>
+			<string>Restarts the CarPlay app to rebuild the home screen with the new wallpaper.</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSButtonCell</string>
+			<key>action</key>
+			<string>RestartCarPlay</string>
+			<key>alignment</key>
+			<integer>2</integer>
+			<key>label</key>
+			<string>Apply on CarPlay</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSButtonCell</string>
+			<key>action</key>
+			<string>ResetWallpaper</string>
+			<key>alignment</key>
+			<integer>1</integer>
+			<key>label</key>
+			<string>Reset Wallpaper</string>
+		</dict>
+	</array>
+	<key>title</key>
+	<string>Car Wallpaper</string>
+</dict>
+</plist>
