@@ -1,17 +1,16 @@
-# CarPlayPlus — GitHub Actions build workflow.
+# CarPlayPlus — GitHub Actions build workflow (macOS runner).
 #
 # Dopamine (arm64e rootless) loads PreferenceBundles from an arm64e-only
 # context, so the package must contain an arm64e slice. Building arm64e
-# requires Apple's toolchain, so this workflow runs on a macOS runner
-# (Xcode + ld64). The iOS 14.5 SDK is fetched from xybp888/iOS-SDKs with
-# a sparse, blob=none clone (same trick as the old Ubuntu job), and the
-# local private-header/stub files kept the build self-contained.
+# requires Apple's toolchain, hence this runs on a macOS runner (Xcode +
+# ld64). The iOS 14.5 SDK is fetched from xybp888/iOS-SDKs via a sparse,
+# blob=none clone; local private headers/stubs keep the build self-contained.
 #
 #   1. clone Theos (+ submodules)
 #   2. install the iOS 14.5 SDK
 #   3. `make package FINALPACKAGE=1 ARCHS="arm64 arm64e"` -> fat .deb
 #      (rootless scheme: /var/jb layout, iphoneos-arm64 architecture)
-#   4. artifacts are uploaded; pushing a `v*` tag publishes a GitHub Release
+#   4. artifacts uploaded; pushing a `v*` tag publishes a GitHub Release
 
 name: Build CarPlayPlus
 
@@ -33,43 +32,36 @@ env:
 jobs:
   build:
     runs-on: macos-latest
-    env:
-      # runner.temp is only available in job-level contexts
-      THEOS: ${{ runner.temp }}/theos
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # ------------------------------------------------------------
-      # Theos (macOS native; Xcode supplies clang/ld64 which support
-      # both arm64 and arm64e slices natively)
-      # ------------------------------------------------------------
       - name: Install Theos
         run: |
+          export THEOS="${{ runner.temp }}/theos"
           git clone --depth 1 --recurse-submodules --shallow-submodules \
             https://github.com/theos/theos.git "$THEOS"
 
       - name: Install packaging tools (ldid, dpkg)
         run: |
+          export THEOS="${{ runner.temp }}/theos"
           brew install ldid dpkg
           mkdir -p "$THEOS/bin"
           cp "$(command -v ldid)" "$THEOS/bin/ldid"
           chmod +x "$THEOS/bin/ldid"
 
-      # ------------------------------------------------------------
-      # iOS SDK (cached across runs)
-      # ------------------------------------------------------------
       - name: Restore SDK cache
         id: sdk-cache
         uses: actions/cache@v4
         with:
-          path: ${{ env.THEOS }}/sdks/iPhoneOS${{ env.SDK_VERSION }}.sdk
+          path: ${{ runner.temp }}/theos/sdks/iPhoneOS${{ env.SDK_VERSION }}.sdk
           key: theos-sdk-macos-${{ env.SDK_VERSION }}
 
       - name: Download iOS SDK
         if: steps.sdk-cache.outputs.cache-hit != 'true'
         run: |
           set -e
+          export THEOS="${{ runner.temp }}/theos"
           mkdir -p "$THEOS/sdks"
           git lfs install --skip-repo
           git clone --depth 1 --filter=blob:none --sparse \
@@ -87,16 +79,15 @@ jobs:
           done
           ls -la "$THEOS/sdks"
 
-      # ------------------------------------------------------------
-      # Build
-      # ------------------------------------------------------------
       - name: Preflight logos syntax
         run: |
+          export THEOS="${{ runner.temp }}/theos"
           perl "$THEOS/bin/logos.pl" Tweak/CarPlayPlus.xm > /dev/null
           echo "logos preflight OK"
 
       - name: Build package
         run: |
+          export THEOS="${{ runner.temp }}/theos"
           make clean package FINALPACKAGE=1 ARCHS="arm64 arm64e"
 
       - name: List packages
@@ -111,9 +102,6 @@ jobs:
             **/*.deb
           if-no-files-found: error
 
-      # ------------------------------------------------------------
-      # Release (only when a tag like v1.0.0 is pushed)
-      # ------------------------------------------------------------
       - name: Publish GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
