@@ -23,6 +23,8 @@ permissions:
 env:
   THEOS: /opt/theos
   SDK_VERSION: "14.5"
+  # lld (used on Linux) has no arm64e backend; build the arm64 slice only.
+  ARCHS: arm64
 
 jobs:
   build:
@@ -135,7 +137,7 @@ jobs:
 
       - name: Build package
         run: |
-          make clean package FINALPACKAGE=1
+          make clean package FINALPACKAGE=1 VERBOSE=1
 
       - name: List packages
         run: |
