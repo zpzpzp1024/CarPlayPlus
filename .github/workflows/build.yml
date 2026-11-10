@@ -125,6 +125,11 @@ jobs:
             fi
             echo "::endgroup::"
           done
+          # Some stripped SDKs ship CoreAudioTypes.framework without a .tbd,
+          # which Preferences.tbd auto-links; provide an empty stub.
+          CAT_DIR="$THEOS/sdks/iPhoneOS${SDK_VERSION}.sdk/System/Library/Frameworks/CoreAudioTypes.framework"
+          mkdir -p "$CAT_DIR"
+          echo "LS0tICF0YXBpLXRiZAp0YmQtdmVyc2lvbjogNAp0YXJnZXRzOiBbIGFybTY0IF0KaW5zdGFsbC1uYW1lOiAvU3lzdGVtL0xpYnJhcmllcy9GcmFtZXdvcmtzL0NvcmVBdWRpb1R5cGVzLmZyYW1ld29yay9Db3JlQXVkaW9UeXBlcwpjdXJyZW50LXZlcnNpb246IDEuMDAKZXhwb3J0czoKICAtIHRhcmdldHM6IFsgYXJtNjQgXQogICAgc3ltYm9sczogW10KLi4uCg==" | base64 -d > "$CAT_DIR/CoreAudioTypes.tbd"
           ls -la "$THEOS/sdks"
 
       # ------------------------------------------------------------
