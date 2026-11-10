@@ -129,7 +129,7 @@ jobs:
           # which Preferences.tbd auto-links; provide an empty stub.
           CAT_DIR="$THEOS/sdks/iPhoneOS${SDK_VERSION}.sdk/System/Library/Frameworks/CoreAudioTypes.framework"
           mkdir -p "$CAT_DIR"
-          echo "LS0tICF0YXBpLXRiZAp0YmQtdmVyc2lvbjogNApwbGF0Zm9ybXM6IFsgaW9zIF0KdGFyZ2V0czogWyBhcm02NCBdCmluc3RhbGwtbmFtZTogL1N5c3RlbS9MaWJyYXJ5L0ZyYW1ld29ya3MvQ29yZUF1ZGlvVHlwZXMuZnJhbWV3b3JrL0NvcmVBdWRpb1R5cGVzCmN1cnJlbnQtdmVyc2lvbjogMS4wCmV4cG9ydHM6CiAgLSB0YXJnZXRzOiBbIGFybTY0IF0KICAgIHN5bWJvbHM6IFtdCi4uLgo=" | base64 -d > "$CAT_DIR/CoreAudioTypes.tbd"
+          echo "LS0tICF0YXBpLXRiZAppbnN0YWxsLW5hbWU6IC9TeXN0ZW0vTGlicmFyeS9GcmFtZXdvcmtzL0NvcmVBdWRpb1R5cGVzLmZyYW1ld29yay9Db3JlQXVkaW9UeXBlcwphcmNoczogWyBhcm02NCBdCnBsYXRmb3JtczogWyBpb3MgXQoKLS0tCgo=" | base64 -d > "$CAT_DIR/CoreAudioTypes.tbd"
           ls -la "$THEOS/sdks"
 
       # ------------------------------------------------------------
