@@ -1,7 +1,7 @@
 //
 //  Preferences/PSControlTableCell.h (minimal declarations for stripped SDKs)
 //
-#import <Preferences/PSTableCell.h>
+#import "PSTableCell.h"
 
 @interface PSControlTableCell : PSTableCell
 @property (nonatomic, retain) UIControl *control;

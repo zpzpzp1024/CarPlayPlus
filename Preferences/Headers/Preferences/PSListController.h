@@ -1,8 +1,8 @@
 //
 //  Preferences/PSListController.h (minimal declarations for stripped SDKs)
 //
-#import <Preferences/PSViewController.h>
-#import <Preferences/PSSpecifier.h>
+#import "PSViewController.h"
+#import "PSSpecifier.h"
 
 @interface PSListController : PSViewController
 @property (nonatomic, retain) UITableView *table;

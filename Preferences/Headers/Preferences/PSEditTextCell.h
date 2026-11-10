@@ -1,7 +1,7 @@
 //
 //  Preferences/PSEditTextCell.h (minimal declarations for stripped SDKs)
 //
-#import <Preferences/PSEditableTableCell.h>
+#import "PSEditableTableCell.h"
 
 @interface PSEditTextCell : PSEditableTableCell
 @end

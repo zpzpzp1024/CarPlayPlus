@@ -3,7 +3,7 @@
 //  CarPlayPlus
 //
 
-#import <Preferences/PSListController.h>
+#import "PSListController.h"
 
 extern NSString *const CPPrefsIdentifier;
 extern NSString *const CPDataIdentifier;

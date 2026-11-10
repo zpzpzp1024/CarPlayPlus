@@ -2,7 +2,7 @@
 //  Preferences/PSTableCell.h (minimal declarations for stripped SDKs)
 //
 #import <UIKit/UIKit.h>
-#import <Preferences/PSSpecifier.h>
+#import "PSSpecifier.h"
 
 @interface PSTableCell : UITableViewCell
 @property (nonatomic, retain) PSSpecifier *specifier;

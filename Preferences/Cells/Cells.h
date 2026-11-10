@@ -3,13 +3,13 @@
 //  CarPlayPlus — custom preference cells
 //
 
-#import <Preferences/PSListController.h>
-#import <Preferences/PSSpecifier.h>
-#import <Preferences/PSTableCell.h>
-#import <Preferences/PSEditableTableCell.h>
-#import <Preferences/PSEditTextCell.h>
-#import <Preferences/PSSliderTableCell.h>
-#import <Preferences/PSControlTableCell.h>
+#import "PSListController.h"
+#import "PSSpecifier.h"
+#import "PSTableCell.h"
+#import "PSEditableTableCell.h"
+#import "PSEditTextCell.h"
+#import "PSSliderTableCell.h"
+#import "PSControlTableCell.h"
 
 // Two-option image style picker (used for status bar position).
 @interface CarPlayPlusStylePickerCell : PSTableCell

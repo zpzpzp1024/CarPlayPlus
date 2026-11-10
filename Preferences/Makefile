@@ -6,7 +6,7 @@ CarPlayPlus_FILES = \
     CarPlayPlusRootListController.m \
     Controllers/Controllers.m \
     Cells/Cells.m
-CarPlayPlus_CFLAGS = -fobjc-arc -w -I$(THEOS_PROJECT_DIR)/Preferences -I$(THEOS_PROJECT_DIR)/Preferences/Headers
+CarPlayPlus_CFLAGS = -fobjc-arc -w -I$(THEOS_PROJECT_DIR)/Preferences -I$(THEOS_PROJECT_DIR)/Preferences/Headers/Preferences
 CarPlayPlus_FRAMEWORKS = UIKit MessageUI
 CarPlayPlus_PRIVATE_FRAMEWORKS = Preferences
 CarPlayPlus_INSTALL_PATH = /Library/PreferenceBundles

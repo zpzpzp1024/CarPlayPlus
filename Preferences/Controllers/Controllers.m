@@ -3,7 +3,7 @@
 //  CarPlayPlus — preference controllers
 //
 
-#import <Preferences/PSSpecifier.h>
+#import "PSSpecifier.h"
 #import <notify.h>
 #import <spawn.h>
 #import <objc/runtime.h>
