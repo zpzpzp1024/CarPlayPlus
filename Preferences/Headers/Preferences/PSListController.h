@@ -1,0 +1,17 @@
+//
+//  Preferences/PSListController.h (minimal declarations for stripped SDKs)
+//
+#import <Preferences/PSViewController.h>
+#import <Preferences/PSSpecifier.h>
+
+@interface PSListController : PSViewController
+@property (nonatomic, retain) UITableView *table;
+@property (nonatomic, retain) NSMutableArray *specifiers;
+
+- (NSArray *)loadSpecifiersFromPlistName:(NSString *)name target:(id)target;
+- (id)readPreferenceValue:(PSSpecifier *)specifier;
+- (void)setPreferenceValue:(id)value specifier:(PSSpecifier *)specifier;
+- (void)reloadSpecifiers;
+- (void)reloadSpecifier:(PSSpecifier *)specifier;
+- (PSSpecifier *)specifierForID:(NSString *)identifier;
+@end
