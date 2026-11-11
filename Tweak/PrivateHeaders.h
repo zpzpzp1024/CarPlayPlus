@@ -61,6 +61,86 @@
 @interface CARIconListPageControl : UIPageControl
 @end
 
+// App grid built by the CarPlay dashboard. Hooked so ANY installed app can be
+// stamped with a forged CRCarPlayAppDeclaration (see CarPlayPlus.xm, Stage 1).
+@interface CARApplication : NSObject
++ (id)_newApplicationLibrary;
+@end
+
+@interface CARAppDockViewController : UIViewController
+- (void)_dockButtonPressed:(id)arg1;
+- (void)_refreshAppDock;
+- (void)setDockEnabled:(BOOL)enabled;
+@end
+
+@interface CARApplicationInfo : NSObject
+@property (nonatomic, readonly) NSString *bundleIdentifier;
+@property (nonatomic, readonly) NSArray *tags;
+@end
+
+#pragma mark - CarKit declaration (resolved at runtime) / LS
+
+@interface LSApplicationProxy : NSObject
++ (id)applicationProxyForIdentifier:(NSString *)identifier;
+@property (nonatomic, readonly) NSString *applicationIdentifier;
+@property (nonatomic, readonly) NSArray *appTags;
+@end
+
+#pragma mark - SpringBoard hosted-window support (Stage 1; app on CarPlay display)
+
+@interface SBApplicationController : NSObject
++ (instancetype)sharedInstance;
+- (id)applicationWithBundleIdentifier:(NSString *)identifier;
+- (NSArray *)allInstalledApplications;
+@end
+
+@interface SBApplication : NSObject
+@property (nonatomic, readonly) NSString *bundleIdentifier;
+@property (nonatomic, readonly) NSURL *bundleURL;
+@property (nonatomic, readonly) NSString *bundleType;
+@property (nonatomic, readonly) NSString *displayName;
+@property (nonatomic, readonly) NSArray *tags;
+@property (nonatomic, readonly) id info;
+@end
+
+@interface SBSceneManagerCoordinator : NSObject
++ (instancetype)mainDisplaySceneManager;
+@end
+
+@interface SBDeviceApplicationSceneEntity : NSObject
+- (id)initWithApplicationSceneHandle:(id)handle;
+@end
+
+@interface SBApplicationSceneHandleRequest : NSObject
++ (id)defaultRequestForApplication:(id)application sceneIdentity:(id)identity displayIdentity:(id)display;
+@end
+
+@interface SBAppViewController : NSObject
+- (id)initWithIdentifier:(NSString *)identifier andApplicationSceneEntity:(id)entity;
+@property (nonatomic, readonly) UIView *view;
+@end
+
+@interface SBSuspendedUnderLockManager : NSObject
+- (int)_shouldBeBackgroundUnderLockForScene:(id)scene withSettings:(id)settings;
+@end
+
+@interface FBScene : NSObject
+- (id)client;
+- (void)updateSettings:(id)settings withTransitionContext:(id)context completion:(id)completion;
+@end
+
+@interface SBSceneView : UIView
+- (void)_updateReferenceSize:(struct CGSize)size andOrientation:(long long)orientation;
+@end
+
+@interface FBSDisplayConfiguration : NSObject
+- (id)initWithCADisplay:(id)display isMainDisplay:(BOOL)isMain;
+@end
+
+@interface UIRootSceneWindow : UIWindow
+- (id)initWithDisplayConfiguration:(id)configuration;
+@end
+
 #pragma mark - Wallpaper / splash
 
 @interface BCBatteryDeviceController : NSObject

@@ -1,6 +1,10 @@
 # Reverse-engineering scratch data (not part of the source project)
 work/
 
+# Reference clones used during development (e.g. carplay-cast for the
+# "any app on CarPlay" technique) — never committed.
+.reference/
+
 # Theos build output
 .theos/
 .package/

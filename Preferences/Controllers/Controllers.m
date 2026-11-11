@@ -620,7 +620,7 @@ static NSString *kBackupRoot(void) { return CPJBPath(@"/Library/CarPlayPlus/back
     }];
 
     UIAlertController *sheet = [UIAlertController alertControllerWithTitle:title
-        message:@"选择要固定显示在该区域的应用（需支持 CarPlay）"
+        message:@"选择要固定显示在该区域的应用（支持任意已安装应用，无需 CarPlay 支持）"
         preferredStyle:UIAlertControllerStyleActionSheet];
     for (NSDictionary *app in list) {
         [sheet addAction:[UIAlertAction actionWithTitle:app[@"name"] style:UIAlertActionStyleDefault

@@ -44,6 +44,7 @@ kern_return_t IOObjectRelease(io_object_t object);
 #import <SystemConfiguration/CaptiveNetwork.h>
 
 #import <substrate.h>
+#import <objc/message.h>
 
 #import "CPPreferences.h"
 #import "PrivateHeaders.h"
@@ -59,6 +60,11 @@ static NSString *CPJBPath(NSString *path) {
     });
     return [jbRoot stringByAppendingString:path];
 }
+
+// Stage 1 "any app on CarPlay": a SpringBoard-side hosted window may be active
+// (see CarPlayPlusHostedWindow) and keeps the CarPlay output alive while the
+// phone screen blanks. Referenced by the BKS screen-blank hook below.
+static BOOL gCPHostedWindowActive = NO;
 
 // ---------------------------------------------------------------------------
 #pragma mark - Preferences
@@ -725,6 +731,18 @@ static BOOL gFullscreenActive = NO;
 static void hook_BKSDisplayServicesSetScreenBlanked(int blanked) {
     // A CarPlay "fullscreen" session keeps the CarPlay output alive; the phone
     // screen may still blank normally through the original implementation.
+    if (blanked == 1 && gCPHostedWindowActive) {
+        // Stage 1: an app is rendering on the CarPlay display. Let the phone
+        // screen blank as intended, then immediately undo the blanking state
+        // so the hosted app's animations/video keep rendering. This does not
+        // relight the phone display.
+        orig_BKSDisplayServicesSetScreenBlanked(1);
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1 * NSEC_PER_SEC)),
+                       dispatch_get_main_queue(), ^{
+            orig_BKSDisplayServicesSetScreenBlanked(0);
+        });
+        return;
+    }
     orig_BKSDisplayServicesSetScreenBlanked(blanked);
 }
 
@@ -999,6 +1017,66 @@ static NSString *const kDashLeft          = @"kDashLeft";
 static NSString *const kDashRightTop      = @"kDashRightTop";
 static NSString *const kDashRightBottom   = @"kDashRightBottom";
 static NSString *const kDumpNotification  = @"xyz.carplayplus.dumpDashboard";
+static NSString *const kAnyAppCarPlay     = @"kAnyAppCarPlay";
+
+// ---------------------------------------------------------------------------
+// Stage 1 — "any app on CarPlay" runtime helpers (shared by CPLaunchDashboardApp
+// below and the CarPlayPlusAnyApp group further down).
+// ---------------------------------------------------------------------------
+
+static BOOL CPAnyAppEnabled(void) { return gEnabled() && boolPref(kAnyAppCarPlay, YES); }
+
+static void CPAnyAppLog(NSString *fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    NSString *msg = [[NSString alloc] initWithFormat:fmt arguments:args];
+    va_end(args);
+    NSLog(@"[CarPlayPlus AnyApp] %@", msg);
+}
+
+// An app stamped with a forged CarPlay declaration carries a "CarPlayEnable"
+// tag (set via the ivars _tags / _carPlayDeclaration on CARApplicationInfo).
+static BOOL CPIsForcedCarPlayApp(id appInfo) {
+    @try {
+        if (!appInfo) return NO;
+        id tags = [appInfo valueForKey:@"tags"];
+        return [tags isKindOfClass:[NSArray class]] && [tags containsObject:@"CarPlayEnable"];
+    } @catch (NSException *e) { return NO; }
+}
+
+// Ask the shared library whether a bundle id has been force-enabled for CarPlay.
+static BOOL CPAppIsForcedForCarPlay(NSString *bundleID) {
+    @try {
+        if (!bundleID.length) return NO;
+        id library = [[UIApplication sharedApplication] valueForKey:@"sharedApplicationLibrary"];
+        if (!library) return NO;
+        SEL sInfo = NSSelectorFromString(@"applicationInfoForBundleIdentifier:");
+        if (![library respondsToSelector:sInfo]) return NO;
+        return CPIsForcedCarPlayApp([library performSelector:sInfo withObject:bundleID]);
+    } @catch (NSException *e) { return NO; }
+}
+
+// Rate-limit repeated forced-app launch requests (dashboard re-appear would
+// otherwise dismiss + re-host the app on every viewDidAppear).
+static NSMutableDictionary<NSString *, NSNumber *> *gForcedLaunchTimes;
+static BOOL CPRecentlyRequestedForcedApp(NSString *bundleID) {
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{ gForcedLaunchTimes = [NSMutableDictionary dictionary]; });
+    NSTimeInterval last = [gForcedLaunchTimes[bundleID] doubleValue];
+    if (last > 0 && ([NSDate date].timeIntervalSince1970 - last) < 15.0) return YES;
+    gForcedLaunchTimes[bundleID] = @([NSDate date].timeIntervalSince1970);
+    return NO;
+}
+
+// Forward a launch request to SpringBoard, which hosts the app's scene in a
+// window attached to the CarPlay display.
+static void CPLogLaunchRequest(NSString *bundleID) {
+    if (!bundleID.length) return;
+    [[NSDistributedNotificationCenter defaultCenter]
+        postNotificationName:@"xyz.carplayplus.launchAppOnCarPlay"
+                      object:nil userInfo:@{@"identifier": bundleID}
+                     options:NSNotificationPostToAllSessions];
+}
 
 static void (*orig_CPDashHomeViewDidAppear)(id self, SEL _cmd, BOOL animated);
 static void hook_CPDashHomeViewDidAppear(id self, SEL _cmd, BOOL animated) {
@@ -1029,6 +1107,14 @@ static CARIconView *CPFindDashboardIcon(UIView *root, NSString *bundleID) {
 // Launch / foreground the given app inside the CarPlay dashboard.
 static void CPLaunchDashboardApp(id dashboard, NSString *bundleID) {
     if (!dashboard) return;
+
+    // Stage 1: apps force-enabled for CarPlay have no native template host.
+    // Forward them to SpringBoard's hosted window on the CarPlay display.
+    if (CPAppIsForcedForCarPlay(bundleID)) {
+        if (CPRecentlyRequestedForcedApp(bundleID)) return;
+        CPLogLaunchRequest(bundleID);
+        return;
+    }
 
     // 1) Prefer simulating a tap on the app's dashboard icon - CarPlay then
     //    launches it and places it in the correct pane (native behavior).
@@ -1165,6 +1251,545 @@ static void CPInstallDashboardHooks(void) {
                                     NULL, CFNotificationSuspensionBehaviorDeliverImmediately);
 }
 
+// ---------------------------------------------------------------------------
+#pragma mark - Stage 1: "any app on CarPlay" (forged CRCarPlayAppDeclaration)
+// ---------------------------------------------------------------------------
+//
+// Ports the proven mechanism from EthanArbuckle/carplay-cast (MIT) so that ANY
+// installed app shows up in the CarPlay dashboard grid and can be presented on
+// the car display — even without a native CarPlay declaration.
+//
+//   CarPlayApp process:
+//   • +[CARApplication _newApplicationLibrary] returns a library listing every
+//     installed app; each is stamped with a forged CRCarPlayAppDeclaration
+//     (supportsTemplates=0, supportsMaps=1, bundle id/path) + "CarPlayEnable"
+//     tag. supportsTemplates MUST stay 0 or the Template host spins up & crashes.
+//   • +[CARApplicationLaunchInfo launchInfoForApplication:...] forwards launches
+//     of forged apps to SpringBoard instead of running them in the template
+//     host, closes the current dashboard foreground scene and refreshes the dock.
+//
+//   SpringBoard process:
+//   • CarPlayPlusHostedWindow presents the app's *main screen* scene view inside
+//     a window attached to the CarPlay display (FBSDisplayConfiguration).
+//   • SBSuspendedUnderLockManager / FBScene / SBSceneView hooks keep the hosted
+//     app alive under lock/backgrounding and guard orientation crashes.
+
+%group CarPlayPlusAnyApp
+
+// runtime shims (mirror carplay-cast's common.h) ---------------------------
+#define CPPInvokeT(obj, sel, t) ((t (*)(id, SEL))objc_msgSend)(obj, NSSelectorFromString(sel))
+#define CPPInvoke(obj, sel)     CPPInvokeT(obj, sel, id)
+#define CPPInvoke1(obj, sel, a) ((id (*)(id, SEL, id))objc_msgSend)(obj, NSSelectorFromString(sel), a)
+#define CPPInvoke2(obj, sel, a, b) ((id (*)(id, SEL, id, id))objc_msgSend)(obj, NSSelectorFromString(sel), a, b)
+
+// Build a forged CRCarPlayAppDeclaration for an arbitrary app. ----------------
+static id CPCreateFakeCarPlayDeclaration(NSString *bundleID, NSURL *bundleURL) {
+    Class declClass = NSClassFromString(@"CRCarPlayAppDeclaration");
+    if (!declClass) return nil;
+    id declaration = [[declClass alloc] init];
+    if (!declaration) return nil;
+    // supportsTemplates MUST remain 0: without this the Template host process
+    // continuously spins up and crashes looking for a template that doesn't exist.
+    SEL s1 = NSSelectorFromString(@"setSupportsTemplates:");
+    if ([declaration respondsToSelector:s1]) [declaration performSelector:s1 withObject:@0];
+    SEL s2 = NSSelectorFromString(@"setSupportsMaps:");
+    if ([declaration respondsToSelector:s2]) [declaration performSelector:s2 withObject:@1];
+    SEL s3 = NSSelectorFromString(@"setBundleIdentifier:");
+    if ([declaration respondsToSelector:s3]) [declaration performSelector:s3 withObject:bundleID];
+    SEL s4 = NSSelectorFromString(@"setBundlePath:");
+    if ([declaration respondsToSelector:s4]) [declaration performSelector:s4 withObject:bundleURL];
+    return declaration;
+}
+
+// Stamp every undeclared user app in the library with a forged declaration. ---
+static void CPAddCarplayDeclarationsToAppLibrary(id appLibrary) {
+    @try {
+        if (!appLibrary) return;
+        NSArray *installed = nil;
+        SEL sInstalled = NSSelectorFromString(@"allInstalledApplications");
+        if ([appLibrary respondsToSelector:sInstalled])
+            installed = [appLibrary performSelector:sInstalled];
+        if (![installed isKindOfClass:[NSArray class]]) return;
+        for (id appInfo in installed) {
+            id existing = nil;
+            @try { existing = [appInfo valueForKey:@"_carPlayDeclaration"]; } @catch (NSException *e) {}
+            if (existing != nil) continue;                  // native CarPlay app? leave it alone
+            NSString *bundleID = nil;
+            @try { bundleID = [appInfo valueForKey:@"bundleIdentifier"]; } @catch (NSException *e) {}
+            if (!bundleID.length) continue;
+            id bundleType = nil;
+            @try { bundleType = [appInfo valueForKey:@"bundleType"]; } @catch (NSException *e) {}
+            if (![bundleType isEqualToString:@"User"] && [bundleID containsString:@"com.apple."])
+                continue;                                   // skip stock/system apps
+            NSURL *bundleURL = nil;
+            @try { bundleURL = [appInfo valueForKey:@"bundleURL"]; } @catch (NSException *e) {}
+            id declaration = CPCreateFakeCarPlayDeclaration(bundleID, bundleURL);
+            if (!declaration) continue;
+            @try {
+                [appInfo setValue:declaration forKey:@"_carPlayDeclaration"];
+                NSArray *tags = [appInfo valueForKey:@"tags"];
+                NSMutableArray *newTags = [NSMutableArray arrayWithObject:@"CarPlayEnable"];
+                if ([tags isKindOfClass:[NSArray class]]) [newTags addObjectsFromArray:tags];
+                [appInfo setValue:newTags forKey:@"_tags"];
+            } @catch (NSException *e) {}
+        }
+    } @catch (NSException *e) {
+        CPAnyAppLog(@"CPAddCarplayDeclarationsToAppLibrary error: %@", e);
+    }
+}
+
+// ---------------------------------------------------------------------------
+#pragma mark - SpringBoard hosted window
+// ---------------------------------------------------------------------------
+// Presents an arbitrary app on the CarPlay display: the app's main-screen scene
+// (SBAppViewController) is placed into a window created on the CarPlay display.
+
+@interface CarPlayPlusHostedWindow : NSObject
+@property (nonatomic, strong) UIWindow *rootWindow;
+@property (nonatomic, strong) UIView *appContainerView;
+@property (nonatomic, strong) id appViewController;      // SBAppViewController
+@property (nonatomic, copy) NSString *hostedBundleID;
+@property (nonatomic, strong) NSMutableArray *lockAssertions;
++ (instancetype)shared;
+- (void)presentAppWithBundleID:(NSString *)bundleID;
+- (void)dismiss;
+@end
+
+static id CPGetCarplayCADisplay(void) {
+    Class avClass = NSClassFromString(@"AVExternalDevice");
+    SEL sCurrent = NSSelectorFromString(@"currentCarPlayExternalDevice");
+    if (!avClass || ![avClass respondsToSelector:sCurrent]) return nil;
+    id carplayDevice = CPPInvoke(avClass, @"currentCarPlayExternalDevice");
+    if (!carplayDevice) return nil;
+    NSArray *screenIDs = CPPInvoke(carplayDevice, @"screenIDs");
+    if (![screenIDs isKindOfClass:[NSArray class]] || !screenIDs.count) return nil;
+    NSString *carplayUniqueID = screenIDs[0];
+    Class displayClass = NSClassFromString(@"CADisplay");
+    SEL sDisplays = NSSelectorFromString(@"displays");
+    if (!displayClass || ![displayClass respondsToSelector:sDisplays]) return nil;
+    for (id display in CPPInvoke(displayClass, @"displays")) {
+        id uniqueID = CPPInvoke(display, @"uniqueId");
+        if ([uniqueID isKindOfClass:[NSString class]] && [uniqueID isEqualToString:carplayUniqueID])
+            return display;
+    }
+    return nil;
+}
+
+@implementation CarPlayPlusHostedWindow
+
++ (instancetype)shared {
+    static CarPlayPlusHostedWindow *instance;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{ instance = [CarPlayPlusHostedWindow new]; });
+    return instance;
+}
+
+- (instancetype)init {
+    self = [super init];
+    if (self) {
+        self.lockAssertions = [NSMutableArray array];
+    }
+    return self;
+}
+
+- (void)dismiss {
+    @try {
+        self.hostedBundleID = nil;
+        self.appViewController = nil;                 // releases the scene handle
+        [self.appContainerView removeFromSuperview];
+        self.appContainerView = nil;
+        [self.rootWindow setHidden:YES];
+        self.rootWindow = nil;
+        [self.lockAssertions removeAllObjects];
+        gCPHostedWindowActive = NO;
+    } @catch (NSException *e) {
+        CPAnyAppLog(@"dismiss error: %@", e);
+    }
+}
+
+- (void)presentAppWithBundleID:(NSString *)bundleID {
+    @try {
+        [self dismiss];
+
+        // 1) Find the CarPlay display and create a window attached to it.
+        id carplayDisplay = CPGetCarplayCADisplay();
+        if (!carplayDisplay) {
+            CPAnyAppLog(@"no CarPlay CADisplay available");
+            return;
+        }
+        Class fbsConfigClass = NSClassFromString(@"FBSDisplayConfiguration");
+        if (!fbsConfigClass) return;
+        id displayConfig = ((id (*)(id, SEL, id, BOOL))objc_msgSend)(
+            [fbsConfigClass alloc],
+            NSSelectorFromString(@"initWithCADisplay:isMainDisplay:"),
+            carplayDisplay, NO);
+        if (!displayConfig) return;
+        Class rootWindowClass = NSClassFromString(@"UIRootSceneWindow");
+        if (!rootWindowClass) return;
+        self.rootWindow = ((id (*)(id, SEL, id))objc_msgSend)(
+            [rootWindowClass alloc],
+            NSSelectorFromString(@"initWithDisplayConfiguration:"), displayConfig);
+        if (!self.rootWindow) return;
+
+        CGRect fullFrame = self.rootWindow.bounds;
+        if (CGRectIsEmpty(fullFrame)) fullFrame = CGRectMake(0, 0, 800, 400);
+        self.appContainerView = [[UIView alloc] initWithFrame:fullFrame];
+        self.appContainerView.backgroundColor = [UIColor blackColor];
+        self.appContainerView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+        self.appContainerView.layer.cornerRadius = 13.0;
+        self.appContainerView.layer.masksToBounds = YES;
+        [self.rootWindow addSubview:self.appContainerView];
+
+        // 2) Resolve the app (SBApplication).
+        Class appControllerClass = NSClassFromString(@"SBApplicationController");
+        if (!appControllerClass ||
+            ![appControllerClass respondsToSelector:@selector(sharedInstance)]) {
+            [self dismiss]; return;
+        }
+        id application = CPPInvoke1(CPPInvoke(appControllerClass, @"sharedInstance"),
+                                    @"applicationWithBundleIdentifier:", bundleID);
+        if (!application) {
+            CPAnyAppLog(@"no SBApplication for %@", bundleID);
+            [self dismiss]; return;
+        }
+
+        // 3) Scene identity + handle on the main display scene manager.
+        Class sceneManagerClass = NSClassFromString(@"SBSceneManagerCoordinator");
+        SEL sMainManager = NSSelectorFromString(@"mainDisplaySceneManager");
+        if (!sceneManagerClass || ![sceneManagerClass respondsToSelector:sMainManager]) {
+            [self dismiss]; return;
+        }
+        id sceneManager = CPPInvoke(sceneManagerClass, @"mainDisplaySceneManager");
+        if (!sceneManager) { [self dismiss]; return; }
+        id mainScreenIdentity = nil;
+        @try { mainScreenIdentity = [sceneManager valueForKey:@"displayIdentity"]; } @catch (NSException *e) {}
+        id sceneIdentity = nil;
+        SEL sSceneId = NSSelectorFromString(@"_sceneIdentityForApplication:createPrimaryIfRequired:");
+        if ([sceneManager respondsToSelector:sSceneId])
+            sceneIdentity = ((id (*)(id, SEL, id, BOOL))objc_msgSend)(
+                sceneManager, sSceneId, application, YES);
+        if (!sceneIdentity) {
+            CPAnyAppLog(@"no scene identity for %@", bundleID);
+            [self dismiss]; return;
+        }
+
+        Class requestClass = NSClassFromString(@"SBApplicationSceneHandleRequest");
+        SEL sDefaultRequest = NSSelectorFromString(@"defaultRequestForApplication:sceneIdentity:displayIdentity:");
+        if (!requestClass || ![requestClass respondsToSelector:sDefaultRequest]) { [self dismiss]; return; }
+        id handleRequest = ((id (*)(id, SEL, id, id, id))objc_msgSend)(
+            requestClass, sDefaultRequest, application, sceneIdentity, mainScreenIdentity);
+        if (!handleRequest) { [self dismiss]; return; }
+        id sceneHandle = nil;
+        SEL sFetchHandle = NSSelectorFromString(@"fetchOrCreateApplicationSceneHandleForRequest:");
+        if ([sceneManager respondsToSelector:sFetchHandle])
+            sceneHandle = [sceneManager performSelector:sFetchHandle withObject:handleRequest];
+        if (!sceneHandle) { [self dismiss]; return; }
+
+        // 4) App view controller + launch transaction.
+        Class entityClass = NSClassFromString(@"SBDeviceApplicationSceneEntity");
+        Class appVCClass = NSClassFromString(@"SBAppViewController");
+        if (!entityClass || !appVCClass) { [self dismiss]; return; }
+        id entity = ((id (*)(id, SEL, id))objc_msgSend)(
+            [entityClass alloc], NSSelectorFromString(@"initWithApplicationSceneHandle:"), sceneHandle);
+        if (!entity) { [self dismiss]; return; }
+        self.appViewController = ((id (*)(id, SEL, id, id))objc_msgSend)(
+            [appVCClass alloc],
+            NSSelectorFromString(@"initWithIdentifier:andApplicationSceneEntity:"),
+            bundleID, entity);
+        if (!self.appViewController) { [self dismiss]; return; }
+
+        objc_msgSend(self.appViewController, NSSelectorFromString(@"setIgnoresOcclusions:"), (BOOL)NO);
+        @try { [self.appViewController setValue:@(2) forKey:@"_currentMode"]; } @catch (NSException *e) {}
+        @try {
+            id activationSettings = [self.appViewController valueForKey:@"_activationSettings"];
+            if ([activationSettings respondsToSelector:@selector(clearActivationSettings)])
+                [activationSettings performSelector:@selector(clearActivationSettings)];
+        } @catch (NSException *e) {}
+
+        SEL sCreateTx = NSSelectorFromString(@"_createSceneUpdateTransactionForApplicationSceneEntity:deliveringActions:");
+        if ([self.appViewController respondsToSelector:sCreateTx]) {
+            __weak CarPlayPlusHostedWindow *weakSelf = self;
+            id transaction = ((id (*)(id, SEL, id, BOOL))objc_msgSend)(
+                self.appViewController, sCreateTx, entity, YES);
+            if (transaction) {
+                SEL sCompletion = NSSelectorFromString(@"setCompletionBlock:");
+                if ([transaction respondsToSelector:sCompletion]) {
+                    void (^completion)(int) = ^(int arg1) {
+                        @autoreleasepool {
+                            CPAnyAppLog(@"hosted app launch completed: %@", bundleID);
+                            id transitions = [weakSelf.appViewController valueForKey:@"_activeTransitions"];
+                            if ([transitions isKindOfClass:[NSMutableArray class]])
+                                [transitions removeObject:transaction];
+                        }
+                    };
+                    [transaction performSelector:sCompletion withObject:completion];
+                }
+            }
+        }
+
+        // 5) Present the scene view on the CarPlay display.
+        UIView *appView = nil;
+        @try { appView = [self.appViewController valueForKey:@"view"]; } @catch (NSException *e) {}
+        if (appView) {
+            appView.frame = self.appContainerView.bounds;
+            appView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+            [self.appContainerView addSubview:appView];
+        }
+
+        self.hostedBundleID = bundleID;
+        [self.lockAssertions addObject:bundleID];
+        gCPHostedWindowActive = YES;
+
+        [self.rootWindow setHidden:NO];
+        [self.rootWindow setAlpha:0];
+        [UIView animateWithDuration:0.35 animations:^{
+            self.rootWindow.alpha = 1.0;
+        }];
+        CPAnyAppLog(@"hosted %@ on CarPlay display", bundleID);
+    } @catch (NSException *e) {
+        CPAnyAppLog(@"presentAppWithBundleID error: %@", e);
+        [self dismiss];
+    }
+}
+
+@end
+
+// ---------------------------------------------------------------------------
+#pragma mark - Hooks (CarPlayApp process)
+// ---------------------------------------------------------------------------
+
+%hook CARApplication
+
+// Build an all-apps library + forged declarations so every user app appears in
+// the dashboard grid. (Gated to the CarPlayApp process; other processes keep
+// their native library.)
++ (id)_newApplicationLibrary {
+    if (!CPAnyAppEnabled()) return %orig;
+    if (![[[NSBundle mainBundle] bundleIdentifier] isEqualToString:@"com.apple.CarPlayApp"])
+        return %orig;
+    @try {
+        Class configClass = NSClassFromString(@"FBSApplicationLibraryConfiguration");
+        Class libraryClass = NSClassFromString(@"FBSApplicationLibrary");
+        Class carAppInfoClass = NSClassFromString(@"CARApplicationInfo");
+        if (!configClass || !libraryClass || !carAppInfoClass) return %orig;
+
+        id configuration = [[configClass alloc] init];
+        SEL sAppInfo = NSSelectorFromString(@"setApplicationInfoClass:");
+        if ([configuration respondsToSelector:sAppInfo])
+            [configuration performSelector:sAppInfo withObject:carAppInfoClass];
+        Class placeholderClass = NSClassFromString(@"FBSApplicationPlaceholder");
+        SEL sPlaceholder = NSSelectorFromString(@"setApplicationPlaceholderClass:");
+        if ([configuration respondsToSelector:sPlaceholder])
+            [configuration performSelector:sPlaceholder withObject:placeholderClass];
+        SEL sConcurrent = NSSelectorFromString(@"setAllowConcurrentLoading:");
+        if ([configuration respondsToSelector:sConcurrent])
+            [configuration performSelector:sConcurrent withObject:@YES];
+        SEL sFilter = NSSelectorFromString(@"setInstalledApplicationFilter:");
+        if ([configuration respondsToSelector:sFilter]) {
+            BOOL (^filterBlock)(id, NSSet *) = ^BOOL(id appProxy, NSSet *ignored) {
+                @try {
+                    NSArray *appTags = CPPInvoke(appProxy, @"appTags");
+                    if ([appTags containsObject:@"hidden"]) return NO;
+                } @catch (NSException *e) {}
+                return YES;
+            };
+            [configuration performSelector:sFilter withObject:filterBlock];
+        }
+
+        id library = [[libraryClass alloc] performSelector:NSSelectorFromString(@"initWithConfiguration:")
+                                                 withObject:configuration];
+        if (!library) return %orig;
+
+        CPAddCarplayDeclarationsToAppLibrary(library);
+
+        NSArray *systemIdentifiers = @[
+            @"com.apple.CarPlayTemplateUIHost", @"com.apple.MusicUIService",
+            @"com.apple.springboard", @"com.apple.InCallService",
+            @"com.apple.CarPlaySettings", @"com.apple.CarPlayApp"];
+        Class proxyClass = NSClassFromString(@"LSApplicationProxy");
+        SEL sAddProxy = NSSelectorFromString(@"addApplicationProxy:withOverrideURL:");
+        if (proxyClass && [library respondsToSelector:sAddProxy]) {
+            for (NSString *ident in systemIdentifiers) {
+                @try {
+                    id proxy = CPPInvoke1(proxyClass, @"applicationProxyForIdentifier:", ident);
+                    if (proxy) [library performSelector:sAddProxy withObject:proxy withObject:nil];
+                } @catch (NSException *e) {}
+            }
+        }
+        return library;
+    } @catch (NSException *e) {
+        CPAnyAppLog(@"+_newApplicationLibrary error: %@", e);
+        return %orig;
+    }
+}
+
+%end
+
+%hook CARApplicationLaunchInfo
+
+// Intercept launches of forged apps and forward them to SpringBoard for
+// hosting; close the current dashboard foreground scene and refresh the dock.
++ (id)launchInfoForApplication:(id)arg1 withActivationSettings:(id)arg2 {
+    if (CPAnyAppEnabled() && CPIsForcedCarPlayApp(arg1)) {
+        @try {
+            NSString *bundleID = [arg1 valueForKey:@"bundleIdentifier"];
+            CPLogLaunchRequest(bundleID);
+
+            UIApplication *sharedApp = [UIApplication sharedApplication];
+
+            // Record the launch in the dashboard app history → updates dock recents.
+            SEL sHistory = NSSelectorFromString(@"_currentAppHistory");
+            if ([sharedApp respondsToSelector:sHistory]) {
+                id appHistory = [sharedApp performSelector:sHistory];
+                if (appHistory) {
+                    NSString *previousBundleID = nil;
+                    SEL sOrdered = NSSelectorFromString(@"orderedAppHistory");
+                    if ([appHistory respondsToSelector:sOrdered]) {
+                        NSArray *ordered = [appHistory performSelector:sOrdered];
+                        if ([ordered isKindOfClass:[NSArray class]] && ordered.count)
+                            previousBundleID = [ordered.firstObject valueForKey:@"bundleIdentifier"];
+                    }
+                    ((void (*)(id, SEL, id, id))objc_msgSend)(
+                        appHistory,
+                        NSSelectorFromString(@"_bundleIdentifierDidBecomeVisible:previousBundleIdentifier:"),
+                        bundleID, previousBundleID);
+                }
+            }
+
+            // Refresh the dock + close the current dashboard foreground scene.
+            SEL sDashboard = NSSelectorFromString(@"_currentDashboard");
+            if ([sharedApp respondsToSelector:sDashboard]) {
+                id dashboard = [sharedApp performSelector:sDashboard];
+                if ([dashboard respondsToSelector:@selector(rootViewController)]) {
+                    id rootVC = [dashboard performSelector:@selector(rootViewController)];
+                    if ([rootVC respondsToSelector:@selector(appDockViewController)]) {
+                        id dock = [rootVC performSelector:@selector(appDockViewController)];
+                        if ([dock respondsToSelector:@selector(_refreshAppDock)])
+                            [dock performSelector:@selector(_refreshAppDock)];
+                    }
+                }
+                SEL sScenes = NSSelectorFromString(@"identifierToForegroundAppScenesMap");
+                if ([dashboard respondsToSelector:sScenes]) {
+                    NSDictionary *foregroundScenes = [dashboard valueForKey:@"identifierToForegroundAppScenesMap"];
+                    if ([foregroundScenes isKindOfClass:[NSDictionary class]] && foregroundScenes.count) {
+                        Class eventClass = NSClassFromString(@"CAREvent");
+                        SEL sEvent = NSSelectorFromString(@"eventWithType:context:");
+                        if (eventClass && [eventClass respondsToSelector:sEvent]) {
+                            id homeEvent = ((id (*)(id, SEL, unsigned long long, id))objc_msgSend)(
+                                eventClass, sEvent, (unsigned long long)1, @"Close carplay app");
+                            if ([dashboard respondsToSelector:@selector(handleEvent:)])
+                                [dashboard performSelector:@selector(handleEvent:) withObject:homeEvent];
+                        }
+                    }
+                }
+            }
+            return nil; // not a native CarPlay app — SpringBoard will host it
+        } @catch (NSException *e) {
+            CPAnyAppLog(@"launchInfoForApplication error: %@", e);
+        }
+    }
+    return %orig;
+}
+
+%end
+
+%hook CARAppDockViewController
+
+// Keep the dock responsive when a forged app is launched from the recents.
+- (void)_dockButtonPressed:(id)arg1 {
+    %orig;
+    @try {
+        if (!CPAnyAppEnabled()) return;
+        NSString *bundleID = [arg1 valueForKey:@"bundleIdentifier"];
+        if (!bundleID.length) return;
+        id library = [[UIApplication sharedApplication] valueForKey:@"sharedApplicationLibrary"];
+        if (!library) return;
+        id appInfo = [library performSelector:NSSelectorFromString(@"applicationInfoForBundleIdentifier:")
+                                   withObject:bundleID];
+        if (appInfo && CPIsForcedCarPlayApp(appInfo)) {
+            SEL sDockEnabled = NSSelectorFromString(@"setDockEnabled:");
+            if ([self respondsToSelector:sDockEnabled])
+                [self performSelector:sDockEnabled withObject:@YES];
+        }
+    } @catch (NSException *e) {}
+}
+
+%end
+
+%hook _CARDashboardHomeViewController
+
+// Re-stamp declarations whenever the dashboard refreshes its app library.
+- (void)_handleAppLibraryRefresh {
+    @try {
+        if (CPAnyAppEnabled() && [self respondsToSelector:@selector(library)])
+            CPAddCarplayDeclarationsToAppLibrary([self performSelector:@selector(library)]);
+    } @catch (NSException *e) {}
+    %orig;
+}
+
+%end
+
+// ---------------------------------------------------------------------------
+#pragma mark - Hooks (SpringBoard process; keep hosted apps alive)
+// ---------------------------------------------------------------------------
+
+%hook SBSuspendedUnderLockManager
+
+// Keep forged apps alive when the phone is locked while they are being hosted.
+- (int)_shouldBeBackgroundUnderLockForScene:(id)arg2 withSettings:(id)arg3 {
+    int shouldBackground = %orig;
+    if (shouldBackground) {
+        @try {
+            CarPlayPlusHostedWindow *host = [CarPlayPlusHostedWindow shared];
+            if (host.lockAssertions.count) {
+                NSString *sceneAppBundleID =
+                    [[[arg2 valueForKey:@"client"] valueForKey:@"process"] valueForKey:@"bundleIdentifier"];
+                if (sceneAppBundleID && [host.lockAssertions containsObject:sceneAppBundleID]) {
+                    CPAnyAppLog(@"keeping hosted app alive under lock: %@", sceneAppBundleID);
+                    shouldBackground = 0;
+                }
+            }
+        } @catch (NSException *e) {}
+    }
+    return shouldBackground;
+}
+
+%end
+
+%hook FBScene
+
+// Prevent forged apps from being backgrounded when other apps are launched on
+// the main screen while they are being hosted on CarPlay.
+- (void)updateSettings:(id)arg1 withTransitionContext:(id)arg2 completion:(void *)arg3 {
+    @try {
+        CarPlayPlusHostedWindow *host = [CarPlayPlusHostedWindow shared];
+        if (host.lockAssertions.count) {
+            NSString *sceneAppBundleID =
+                [[[self valueForKey:@"client"] valueForKey:@"process"] valueForKey:@"bundleIdentifier"];
+            if (sceneAppBundleID && [host.lockAssertions containsObject:sceneAppBundleID]) {
+                BOOL isForeground = CPPInvokeT(arg1, @"isForeground", BOOL);
+                if (!isForeground) return;   // swallow the background request
+            }
+        }
+    } @catch (NSException *e) {}
+    %orig;
+}
+
+%end
+
+%hook SBSceneView
+
+// Scene views do not support Face-Up/Face-Down orientations — override to
+// landscape (3) so a hosted app never crashes while the phone sits flat.
+- (void)_updateReferenceSize:(struct CGSize)arg1 andOrientation:(long long)arg2 {
+    if (arg2 > 4) return %orig(arg1, 3);
+    %orig;
+}
+
+%end
+
+%end // CarPlayPlusAnyApp
+
 %ctor {
     CPPrefsRegisterDefaults(@{
         kEnabled: @YES,
@@ -1180,10 +1805,25 @@ static void CPInstallDashboardHooks(void) {
         kFull_size: @30, kFullBtn_x: @14, kFullBtn_y: @14,
         kRemoveSplash: @NO,
         kDashboardCustom: @NO, kDashLeft: @"", kDashRightTop: @"", kDashRightBottom: @"",
+        kAnyAppCarPlay: @YES,
     });
 
     // Split-screen dashboard customization (CarPlayApp process; no-op elsewhere)
     CPInstallDashboardHooks();
+
+    // Stage 1 — "any app on CarPlay" (declaration forgery + hosted window)
+    %init(CarPlayPlusAnyApp);
+    if ([[[NSBundle mainBundle] bundleIdentifier] isEqualToString:@"com.apple.springboard"]) {
+        // SpringBoard listens for launch requests from the CarPlay process and
+        // hosts the requested app in a window attached to the CarPlay display.
+        [[NSDistributedNotificationCenter defaultCenter]
+            addObserverForName:@"xyz.carplayplus.launchAppOnCarPlay"
+                        object:nil queue:[NSOperationQueue mainQueue]
+                    usingBlock:^(NSNotification *note) {
+            NSString *identifier = note.userInfo[@"identifier"];
+            if (identifier.length) [[CarPlayPlusHostedWindow shared] presentAppWithBundleID:identifier];
+        }];
+    }
 
     // BKS screen-blank hook
     void *bks = dlopen("/System/Library/PrivateFrameworks/BackBoardServices.framework/BackBoardServices", RTLD_NOW);

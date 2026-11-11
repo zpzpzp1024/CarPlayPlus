@@ -10,7 +10,7 @@
 			<key>label</key>
 			<string>分屏自定义</string>
 			<key>footerText</key>
-			<string>开启后，每次进入 CarPlay 分屏（仪表盘）会自动把左侧、右上、右下三个区域切换为你指定的应用。应用需支持 CarPlay；布局归类由 CarPlay 决定（导航类进左侧，媒体/小组件类进右侧）。</string>
+			<string>开启后，每次进入 CarPlay 分屏（仪表盘）会自动把左侧、右上、右下三个区域切换为你指定的应用。支持任意已安装应用：未声明 CarPlay 的应用会由「任意 App 上 CarPlay」托管到车机显示。</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -29,7 +29,30 @@
 			<key>cell</key>
 			<string>PSGroupCell</string>
 			<key>label</key>
-			<string>左侧主区域（地图导航区）</string>
+			<string>任意 App 上 CarPlay</string>
+			<key>footerText</key>
+			<string>开启后，未声明 CarPlay 支持的已安装应用也会出现在 CarPlay 图标网格中。点击时会由 CarPlayPlus 把应用画面托管到车机屏幕显示（伪造 CarPlay 声明，与 CarPlayCast 同原理）。个别应用可能出现白屏/掉帧，属正常现象，可逐个适配。</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<true/>
+			<key>defaults</key>
+			<string>xyz.carplayplus.tweak</string>
+			<key>key</key>
+			<string>kAnyAppCarPlay</string>
+			<key>label</key>
+			<string>启用任意 App 上 CarPlay</string>
+		</dict>
+
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
+			<string>三区域应用配置</string>
+			<key>footerText</key>
+			<string>为左侧主区域、右上、右下三个区域分别选择要固定显示的应用。现在支持任意已安装应用；原生 CarPlay 应用（如地图、音乐）仍走系统自带的分屏归类。</string>
 		</dict>
 		<dict>
 			<key>cell</key>
