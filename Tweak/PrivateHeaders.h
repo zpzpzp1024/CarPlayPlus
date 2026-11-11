@@ -141,6 +141,14 @@
 - (id)initWithDisplayConfiguration:(id)configuration;
 @end
 
+// Distributed notifications shuttle "launch this app on CarPlay" requests from
+// the CarPlayApp process to SpringBoard. NSDistributedNotificationCenter lives
+// in the private AppSupport framework; declare it here (it subclasses
+// NSNotificationCenter so +defaultCenter / post / addObserver are inherited).
+@interface NSDistributedNotificationCenter : NSNotificationCenter
++ (instancetype)defaultCenter;
+@end
+
 #pragma mark - Wallpaper / splash
 
 @interface BCBatteryDeviceController : NSObject

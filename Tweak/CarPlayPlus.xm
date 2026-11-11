@@ -1074,8 +1074,7 @@ static void CPLogLaunchRequest(NSString *bundleID) {
     if (!bundleID.length) return;
     [[NSDistributedNotificationCenter defaultCenter]
         postNotificationName:@"xyz.carplayplus.launchAppOnCarPlay"
-                      object:nil userInfo:@{@"identifier": bundleID}
-                     options:NSNotificationPostToAllSessions];
+                      object:nil userInfo:@{@"identifier": bundleID}];
 }
 
 static void (*orig_CPDashHomeViewDidAppear)(id self, SEL _cmd, BOOL animated);
@@ -1498,7 +1497,7 @@ static id CPGetCarplayCADisplay(void) {
             bundleID, entity);
         if (!self.appViewController) { [self dismiss]; return; }
 
-        objc_msgSend(self.appViewController, NSSelectorFromString(@"setIgnoresOcclusions:"), (BOOL)NO);
+        ((void (*)(id, SEL, BOOL))objc_msgSend)(self.appViewController, NSSelectorFromString(@"setIgnoresOcclusions:"), NO);
         @try { [self.appViewController setValue:@(2) forKey:@"_currentMode"]; } @catch (NSException *e) {}
         @try {
             id activationSettings = [self.appViewController valueForKey:@"_activationSettings"];
