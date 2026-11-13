@@ -9,7 +9,7 @@ CarPlayPlus_FILES = \
     Cells/PSEditTextCell.m \
     Cells/PSCellConstants.m
 CarPlayPlus_CFLAGS = -fobjc-arc -w -I$(THEOS_PROJECT_DIR)/Preferences -I$(THEOS_PROJECT_DIR)/Preferences/Headers/Preferences
-CarPlayPlus_FRAMEWORKS = UIKit MessageUI
+CarPlayPlus_FRAMEWORKS = UIKit MessageUI MobileCoreServices
 CarPlayPlus_PRIVATE_FRAMEWORKS = Preferences
 CarPlayPlus_INSTALL_PATH = /Library/PreferenceBundles
 

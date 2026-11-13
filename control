@@ -1,9 +1,9 @@
 Package: xyz.carplayplus.tweak
 Name: CarPlayPlus
 Depends: mobilesubstrate, preferenceloader, firmware (>= 14.0)
-Version: 1.1.0
+Version: 1.2.0
 Architecture: iphoneos-arm64
-Description: CarPlay customization — icon layout, wallpaper (incl. GIF), status bar, widgets, fullscreen apps and invisible icons. Modern re-implementation.
+Description: 分屏自定义（三区域固定 App）+ 任意 App 上 CarPlay + CarPlay 连接后自动连接指定 WiFi 热点。精简保留版。
 Maintainer: CarPlayPlus
 Author: CarPlayPlus
 Section: Tweaks

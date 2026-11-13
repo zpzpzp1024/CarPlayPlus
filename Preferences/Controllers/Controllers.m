@@ -21,6 +21,64 @@ static NSString *CPJBPath(NSString *path) {
     return [jbRoot stringByAppendingString:path];
 }
 
+#pragma mark - Installed app enumeration
+
+// Robust installed-app enumeration for use inside the Preferences process.
+// 1) Try LSApplicationWorkspace (requires MobileCoreServices to be linked).
+// 2) Fall back to scanning the on-disk app containers and parsing Info.plist.
+NSArray *CPInstalledAppsList(void) {
+    NSMutableArray *result = [NSMutableArray array];
+    NSMutableSet *seen = [NSMutableSet set];
+
+    Class wsClass = NSClassFromString(@"LSApplicationWorkspace");
+    if (wsClass) {
+        id ws = [wsClass performSelector:@selector(defaultWorkspace)];
+        NSArray *apps = ws ? [ws performSelector:@selector(allApplications)] : nil;
+        for (id proxy in apps) {
+            NSString *bid = [proxy performSelector:@selector(applicationBundleIdentifier)];
+            if (![bid isKindOfClass:[NSString class]] || ![bid length]) continue;
+            if ([seen containsObject:bid]) continue;
+            [seen addObject:bid];
+            NSString *name = [proxy performSelector:@selector(localizedName)];
+            if (![name isKindOfClass:[NSString class]] || !name.length) name = bid;
+            [result addObject:@{@"id": bid, @"name": name}];
+        }
+    }
+
+    if (!result.count) {
+        // Filesystem fallback: user app containers + (rootless) /Applications.
+        NSArray *roots = @[
+            @"/var/containers/Bundle/Application",
+            @"/var/jb/Applications",
+            @"/Applications"
+        ];
+        NSFileManager *fm = [NSFileManager defaultManager];
+        for (NSString *root in roots) {
+            if (![fm fileExistsAtPath:root]) continue;
+            NSArray *dirs = [fm contentsOfDirectoryAtPath:root error:NULL];
+            for (NSString *dir in dirs) {
+                if ([dir hasPrefix:@"."]) continue;
+                NSString *infoPath = [[root stringByAppendingPathComponent:dir] stringByAppendingPathComponent:@"Info.plist"];
+                NSDictionary *info = [NSDictionary dictionaryWithContentsOfFile:infoPath];
+                if (!info) continue;
+                NSString *bid = info[@"CFBundleIdentifier"];
+                if (![bid isKindOfClass:[NSString class]] || ![bid length]) continue;
+                if ([bid hasPrefix:@"com.apple."]) continue;
+                if ([seen containsObject:bid]) continue;
+                [seen addObject:bid];
+                NSString *name = info[@"CFBundleDisplayName"] ?: info[@"CFBundleName"];
+                if (![name isKindOfClass:[NSString class]] || !name.length) name = bid;
+                [result addObject:@{@"id": bid, @"name": name}];
+            }
+        }
+    }
+
+    [result sortUsingComparator:^NSComparisonResult(NSDictionary *a, NSDictionary *b) {
+        return [a[@"name"] compare:b[@"name"] options:NSCaseInsensitiveSearch];
+    }];
+    return result;
+}
+
 #pragma mark - Base
 
 @interface CarPlayPlusBaseController : PSListController
@@ -383,18 +441,7 @@ static NSString *CPJBPath(NSString *path) {
 }
 
 - (void)LoadApps {
-    id ws = [NSClassFromString(@"LSApplicationWorkspace") performSelector:@selector(defaultWorkspace)];
-    NSArray *apps = [ws performSelector:@selector(allApplications)];
-    NSMutableArray *list = [NSMutableArray array];
-    for (id proxy in apps) {
-        NSString *bid = [proxy performSelector:@selector(applicationBundleIdentifier)];
-        if (!bid || [bid hasPrefix:@"com.apple."]) continue;
-        NSString *name = [proxy performSelector:@selector(localizedName)] ?: bid;
-        [list addObject:@{@"id": bid, @"name": name}];
-    }
-    [list sortUsingComparator:^NSComparisonResult(NSDictionary *a, NSDictionary *b) {
-        return [a[@"name"] compare:b[@"name"]];
-    }];
+    NSArray *list = CPInstalledAppsList();
     self.selectedApps = [NSMutableArray arrayWithArray:
         (id)CPPrefAnyGet(CPPrefsIdentifier, @"kFullApps") ?: @[]];
 
@@ -592,12 +639,9 @@ static NSString *kBackupRoot(void) { return CPJBPath(@"/Library/CarPlayPlus/back
 }
 
 - (NSString *)appNameForBundleID:(NSString *)bid {
-    id ws = [NSClassFromString(@"LSApplicationWorkspace") performSelector:@selector(defaultWorkspace)];
-    if (!ws) return nil;
-    for (id proxy in [ws performSelector:@selector(allApplications)]) {
-        NSString *pid = [proxy performSelector:@selector(applicationBundleIdentifier)];
-        if ([pid isEqualToString:bid])
-            return [proxy performSelector:@selector(localizedName)] ?: bid;
+    for (NSDictionary *app in CPInstalledAppsList()) {
+        if ([app[@"id"] isEqualToString:bid])
+            return app[@"name"];
     }
     return nil;
 }
@@ -607,17 +651,7 @@ static NSString *kBackupRoot(void) { return CPJBPath(@"/Library/CarPlayPlus/back
 - (void)PickRightBottomApp  { [self showAppPickerForKey:@"kDashRightBottom" title:@"选择右下应用"]; }
 
 - (void)showAppPickerForKey:(NSString *)key title:(NSString *)title {
-    id ws = [NSClassFromString(@"LSApplicationWorkspace") performSelector:@selector(defaultWorkspace)];
-    NSMutableArray *list = [NSMutableArray array];
-    for (id proxy in [ws performSelector:@selector(allApplications)]) {
-        NSString *bid = [proxy performSelector:@selector(applicationBundleIdentifier)];
-        if (!bid || [bid hasPrefix:@"com.apple."]) continue;
-        NSString *name = [proxy performSelector:@selector(localizedName)] ?: bid;
-        [list addObject:@{@"id": bid, @"name": name}];
-    }
-    [list sortUsingComparator:^NSComparisonResult(NSDictionary *a, NSDictionary *b) {
-        return [a[@"name"] compare:b[@"name"]];
-    }];
+    NSArray *list = CPInstalledAppsList();
 
     UIAlertController *sheet = [UIAlertController alertControllerWithTitle:title
         message:@"选择要固定显示在该区域的应用（支持任意已安装应用，无需 CarPlay 支持）"
@@ -658,6 +692,99 @@ static NSString *kBackupRoot(void) { return CPJBPath(@"/Library/CarPlayPlus/back
     }];
     CPNotifyPrefsChanged();
     [self refreshDashboardValues];
+}
+
+@end
+
+#pragma mark - WiFi auto-join settings
+
+static NSString *const kWifiSSIDKey = @"kWifiSSID";
+static NSString *const kWifiPasswordKey = @"kWifiPassword";
+
+@interface CarPlayPlusWiFiController : CarPlayPlusBaseController
+@end
+
+@implementation CarPlayPlusWiFiController
+
+- (NSArray *)specifiers {
+    if (!_specifiers) _specifiers = [self loadSpecifiersFromPlistName:@"WiFi" target:self];
+    return _specifiers;
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    [self refreshWiFiValues];
+}
+
+- (void)refreshWiFiValues {
+    NSString *ssid = CPPrefAnyGet(CPPrefsIdentifier, kWifiSSIDKey);
+    NSString *pass = CPPrefAnyGet(CPPrefsIdentifier, kWifiPasswordKey);
+    NSString *ssidDisplay = [ssid isKindOfClass:[NSString class]] && ssid.length ? ssid : @"未设置";
+    NSString *passDisplay = [pass isKindOfClass:[NSString class]] && pass.length ? @"••••••••" : @"未设置";
+    PSSpecifier *spec = [self specifierForID:@"WIFI_SSID"];
+    if (spec) {
+        [spec setProperty:ssidDisplay forKey:@"value"];
+        [self reloadSpecifier:spec];
+    }
+    spec = [self specifierForID:@"WIFI_PASS"];
+    if (spec) {
+        [spec setProperty:passDisplay forKey:@"value"];
+        [self reloadSpecifier:spec];
+    }
+}
+
+- (void)SetWifiSSID {
+    NSString *cur = CPPrefAnyGet(CPPrefsIdentifier, kWifiSSIDKey);
+    if (![cur isKindOfClass:[NSString class]]) cur = @"";
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"热点名称"
+        message:@"输入要自动连接的热点名称（SSID）。若手机已连接过该热点，名称大小写需完全一致；若从未连接过，还需设置下面的热点密码。"
+        preferredStyle:UIAlertControllerStyleAlert];
+    [alert addTextFieldWithConfigurationHandler:^(UITextField *tf) {
+        tf.text = cur;
+        tf.placeholder = @"例如 MyCarHotsSpot";
+        tf.autocorrectionType = UITextAutocorrectionTypeNo;
+        tf.clearButtonMode = UITextFieldViewModeWhileEditing;
+    }];
+    [alert addAction:[UIAlertAction actionWithTitle:@"取消" style:UIAlertActionStyleCancel handler:nil]];
+    [alert addAction:[UIAlertAction actionWithTitle:@"保存" style:UIAlertActionStyleDefault
+        handler:^(UIAlertAction *a) {
+            NSString *v = [alert.textFields.firstObject.text stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
+            if (!v.length) return;
+            CPPrefAnySet(CPPrefsIdentifier, kWifiSSIDKey, v);
+            CPNotifyPrefsChanged();
+            [self refreshWiFiValues];
+        }]];
+    [self presentViewController:alert animated:YES completion:nil];
+}
+
+- (void)SetWifiPassword {
+    NSString *cur = CPPrefAnyGet(CPPrefsIdentifier, kWifiPasswordKey);
+    if (![cur isKindOfClass:[NSString class]]) cur = @"";
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"热点密码"
+        message:@"仅当手机从未连接过该热点时才需要填写；已连接过的热点只需设置名称。"
+        preferredStyle:UIAlertControllerStyleAlert];
+    [alert addTextFieldWithConfigurationHandler:^(UITextField *tf) {
+        tf.text = cur;
+        tf.secureTextEntry = YES;
+        tf.placeholder = @"WiFi 密码";
+    }];
+    [alert addAction:[UIAlertAction actionWithTitle:@"取消" style:UIAlertActionStyleCancel handler:nil]];
+    [alert addAction:[UIAlertAction actionWithTitle:@"保存" style:UIAlertActionStyleDefault
+        handler:^(UIAlertAction *a) {
+            NSString *v = alert.textFields.firstObject.text;
+            if (!v.length) return;
+            CPPrefAnySet(CPPrefsIdentifier, kWifiPasswordKey, v);
+            CPNotifyPrefsChanged();
+            [self refreshWiFiValues];
+        }]];
+    [self presentViewController:alert animated:YES completion:nil];
+}
+
+- (void)ClearWifiConfig {
+    CPPrefAnyRemove(CPPrefsIdentifier, kWifiSSIDKey);
+    CPPrefAnyRemove(CPPrefsIdentifier, kWifiPasswordKey);
+    CPNotifyPrefsChanged();
+    [self refreshWiFiValues];
 }
 
 @end

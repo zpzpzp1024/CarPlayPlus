@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>items</key>
+	<array>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
+			<string>WiFi 自动连接</string>
+			<key>footerText</key>
+			<string>开启后，每次检测到 CarPlay 连接（有线或无线）时，手机会自动尝试连接下面配置的 WiFi 热点。常用于：CarPlay 连接后自动连上车载或家里的路由器热点。</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<false/>
+			<key>defaults</key>
+			<string>xyz.carplayplus.tweak</string>
+			<key>key</key>
+			<string>kWifiAutoJoin</string>
+			<key>label</key>
+			<string>启用自动连接</string>
+		</dict>
+
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
+			<string>热点配置</string>
+			<key>footerText</key>
+			<string>热点名称必须与手机曾经连接过的热点名称完全一致（含大小写）；如果手机从未连接过该热点，还需要在「热点密码」中填写密码。自动连接大约在 CarPlay 连接后 3 秒内触发。</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSTitleValueCell</string>
+			<key>action</key>
+			<string>SetWifiSSID</string>
+			<key>id</key>
+			<string>WIFI_SSID</string>
+			<key>label</key>
+			<string>热点名称</string>
+			<key>value</key>
+			<string>未设置</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSTitleValueCell</string>
+			<key>action</key>
+			<string>SetWifiPassword</string>
+			<key>id</key>
+			<string>WIFI_PASS</string>
+			<key>label</key>
+			<string>热点密码</string>
+			<key>value</key>
+			<string>未设置</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSButtonCell</string>
+			<key>action</key>
+			<string>ClearWifiConfig</string>
+			<key>alignment</key>
+			<integer>1</integer>
+			<key>label</key>
+			<string>清除配置</string>
+		</dict>
+	</array>
+	<key>title</key>
+	<string>WiFi 自动连接</string>
+</dict>
+</plist>

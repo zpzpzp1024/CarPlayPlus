@@ -969,29 +969,199 @@ static void UpdateWidgetWindowState(BOOL connected) {
 #pragma mark - Wiring
 // ---------------------------------------------------------------------------
 
-static void OnCarPlayConnect(NSNotification *note) {
-    NSDictionary *ui = note.userInfo;
-    NSNumber *connected = ui[@"IsConnected"] ?: ui[@"CarPlayIsConnectedDidChange_IsConnected"];
-    UpdateWidgetWindowState(connected ? connected.boolValue : YES);
-}
-
-static void OnIconLayoutChanged(NSNotification *note) {
-    ApplyLayoutToAll();
-}
-
 static void OnPrefsChanged(NSNotification *note);
 static void CPApplyDashboardLayout(void);   // forward (split-screen group below)
 
+// Re-apply preferences for the features that remain:
+// split-screen dashboard customization (and its hosted-window handling).
 static void OnPrefsChanged(NSNotification *note) {
-    if (gWidgetWindow) [gWidgetWindow updateWidgets];
-    if (boolPref(kWallEnabled, NO)) {
-        UIWindow *w = [UIApplication sharedApplication].keyWindow;
-        if (w) [[CarPlayPlusWallpaper shared] applyToWindow:w];
-    } else {
-        [[CarPlayPlusWallpaper shared] invalidate];
-    }
-    ApplyLayoutToAll();
     CPApplyDashboardLayout();
+}
+
+// ---------------------------------------------------------------------------
+#pragma mark - WiFi auto-join on CarPlay connect (SpringBoard)
+// ---------------------------------------------------------------------------
+//
+// When CarPlay connects (wired or wireless) and the user enabled this in
+// Settings, SpringBoard opens Wi-Fi and asks the system to join the
+// configured hotspot. Two backends are attempted:
+//   1) WiFiManagerClient (private C API) — adds the network to the known
+//      list and flags it `joinOnce` so the system joins right away.
+//   2) NEHotspotConfigurationManager — public API used as a fallback.
+
+static NSString *const kWifiAutoJoin = @"kWifiAutoJoin";
+static NSString *const kWifiSSID     = @"kWifiSSID";
+static NSString *const kWifiPassword = @"kWifiPassword";
+
+typedef struct __WiFiManagerClient *WiFiManagerClientRef;
+typedef struct __WiFiNetwork *WiFiNetworkRef;
+
+typedef WiFiManagerClientRef (*CPWiFiClientCreateFn)(CFAllocatorRef, int);
+typedef void (*CPWiFiClientSetPowerFn)(WiFiManagerClientRef, bool);
+typedef WiFiNetworkRef (*CPWiFiClientGetNetworkFn)(WiFiManagerClientRef, CFStringRef);
+typedef void (*CPWiFiClientAddNetworkFn)(WiFiManagerClientRef, WiFiNetworkRef);
+typedef void (*CPWiFiClientSetNetworkPropertyFn)(WiFiManagerClientRef, WiFiNetworkRef, CFStringRef, CFTypeRef);
+typedef CFMutableDictionaryRef (*CPWiFiNetworkCreateFn)(CFAllocatorRef, CFDictionaryRef);
+typedef void (*CPWiFiNetworkSetPropertyFn)(WiFiNetworkRef, CFStringRef, CFTypeRef);
+
+static WiFiManagerClientRef (*sWiFiClientCreate)(CFAllocatorRef, int);
+static void (*sWiFiClientSetPower)(WiFiManagerClientRef, bool);
+static WiFiNetworkRef (*sWiFiClientGetNetwork)(WiFiManagerClientRef, CFStringRef);
+static void (*sWiFiClientAddNetwork)(WiFiManagerClientRef, WiFiNetworkRef);
+static void (*sWiFiClientSetNetworkProperty)(WiFiManagerClientRef, WiFiNetworkRef, CFStringRef, CFTypeRef);
+static CFMutableDictionaryRef (*sWiFiNetworkCreate)(CFAllocatorRef, CFDictionaryRef);
+static void (*sWiFiNetworkSetProperty)(WiFiNetworkRef, CFStringRef, CFTypeRef);
+
+static void CPWiFiLog(NSString *fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    NSString *msg = [[NSString alloc] initWithFormat:fmt arguments:args];
+    va_end(args);
+    NSLog(@"[CarPlayPlus WiFi] %@", msg);
+}
+
+static BOOL CPWiFiLoadSymbols(void) {
+    static BOOL loaded = NO;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        NSArray *paths = @[
+            @"/System/Library/PrivateFrameworks/WiFiManager.framework/WiFiManager",
+            @"/System/Library/PrivateFrameworks/MobileWiFi.framework/MobileWiFi",
+        ];
+        for (NSString *path in paths) {
+            void *handle = dlopen(path.UTF8String, RTLD_NOW);
+            if (!handle) continue;
+            sWiFiClientCreate          = (CPWiFiClientCreateFn)dlsym(handle, "WiFiManagerClientCreate");
+            sWiFiClientSetPower        = (CPWiFiClientSetPowerFn)dlsym(handle, "WiFiManagerClientSetPower");
+            sWiFiClientGetNetwork      = (CPWiFiClientGetNetworkFn)dlsym(handle, "WiFiManagerClientGetNetwork");
+            sWiFiClientAddNetwork      = (CPWiFiClientAddNetworkFn)dlsym(handle, "WiFiManagerClientAddNetwork");
+            sWiFiClientSetNetworkProperty = (CPWiFiClientSetNetworkPropertyFn)dlsym(handle, "WiFiManagerClientSetNetworkProperty");
+            sWiFiNetworkCreate         = (CPWiFiNetworkCreateFn)dlsym(handle, "WiFiNetworkCreate");
+            sWiFiNetworkSetProperty    = (CPWiFiNetworkSetPropertyFn)dlsym(handle, "WiFiNetworkSetProperty");
+            if (sWiFiClientCreate && sWiFiClientAddNetwork) {
+                loaded = YES;
+                break;
+            }
+        }
+    });
+    return loaded;
+}
+
+static void CPJoinWiFiNetwork(NSString *ssid, NSString *password) {
+    if (!ssid.length) return;
+
+    // 1) Make sure Wi-Fi is turned on (SpringBoard controls it).
+    @try {
+        id wifiMgr = [NSClassFromString(@"SBWiFiManager") performSelector:@selector(sharedInstance)];
+        if (wifiMgr && [wifiMgr respondsToSelector:@selector(setWiFiEnabled:)]) {
+            ((void (*)(id, SEL, BOOL))objc_msgSend)(wifiMgr, NSSelectorFromString(@"setWiFiEnabled:"), YES);
+        }
+    } @catch (NSException *e) {}
+
+    // 2) Primary path: WiFiManagerClient private API (add + joinOnce).
+    if (CPWiFiLoadSymbols()) {
+        WiFiManagerClientRef client = sWiFiClientCreate(kCFAllocatorDefault, 0);
+        if (!client) {
+            CPWiFiLog(@"failed to create WiFiManagerClient");
+            return;
+        }
+        if (sWiFiClientSetPower) sWiFiClientSetPower(client, true);
+
+        CFStringRef ssidRef = (__bridge CFStringRef)ssid;
+        WiFiNetworkRef net = sWiFiClientGetNetwork ? sWiFiClientGetNetwork(client, ssidRef) : NULL;
+        BOOL added = NO;
+        if (!net && ssid.length) {
+            NSMutableDictionary *props = [NSMutableDictionary dictionary];
+            props[@"SSID"] = ssid;
+            if (password.length) props[@"Password"] = password;
+            CFMutableDictionaryRef propsRef = sWiFiNetworkCreate
+                ? sWiFiNetworkCreate(kCFAllocatorDefault, (__bridge CFDictionaryRef)props)
+                : NULL;
+            if (propsRef) {
+                sWiFiClientAddNetwork(client, (WiFiNetworkRef)propsRef);
+                added = YES;
+                if (sWiFiClientGetNetwork) net = sWiFiClientGetNetwork(client, ssidRef);
+                CFRelease(propsRef);
+            }
+        }
+        if (net) {
+            if (sWiFiClientSetNetworkProperty)
+                sWiFiClientSetNetworkProperty(client, net, CFSTR("joinOnce"), kCFBooleanTrue);
+            if (sWiFiNetworkSetProperty)
+                sWiFiNetworkSetProperty(net, CFSTR("remember"), kCFBooleanTrue);
+        }
+        CPWiFiLog(@"join \"%@\" added=%d known=%s", ssid, added, net ? "yes" : "no");
+        CFRelease(client);
+        return;
+    }
+
+    // 3) Fallback: public NEHotspotConfiguration API.
+    @try {
+        dlopen("/System/Library/Frameworks/NetworkExtension.framework/NetworkExtension", RTLD_NOW);
+        Class cfgClass = NSClassFromString(@"NEHotspotConfiguration");
+        Class mgrClass = NSClassFromString(@"NEHotspotConfigurationManager");
+        if (cfgClass && mgrClass) {
+            id cfg = [[cfgClass alloc] initWithSSID:ssid
+                                         passphrase:password.length ? password : nil
+                                             isWEP:NO];
+            if (cfg) {
+                id manager = [mgrClass sharedManager];
+                [manager applyConfiguration:cfg completionHandler:^(NSError *error) {
+                    CPWiFiLog(@"NEHotspot apply \"%@\" error=%@", ssid, error);
+                }];
+            }
+        }
+    } @catch (NSException *e) {
+        CPWiFiLog(@"NEHotspot fallback failed: %@", e);
+    }
+}
+
+// Called when CarPlay transitions to connected. Delays briefly so the
+// network stack settles, then joins the configured hotspot.
+static void CPWiFiHandleCarPlayConnected(BOOL isConnected) {
+    if (!isConnected) return;
+    if (!gEnabled() || !CPPrefsBoolForKey(kWifiAutoJoin, NO)) return;
+    NSString *ssid = CPPrefsStringForKey(kWifiSSID, nil);
+    if (!ssid.length) return;
+    NSString *password = CPPrefsStringForKey(kWifiPassword, @"");
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(3.0 * NSEC_PER_SEC)),
+                   dispatch_get_main_queue(), ^{
+        CPJoinWiFiNetwork(ssid, password);
+    });
+}
+
+// Called from SpringBoard when the phone connects / disconnects CarPlay.
+static void OnCarPlayConnectForWiFi(NSNotification *note) {
+    if (![[[NSBundle mainBundle] bundleIdentifier] isEqualToString:@"com.apple.springboard"]) return;
+    NSDictionary *ui = note.userInfo;
+    NSNumber *connected = ui[@"IsConnected"] ?: ui[@"CarPlayIsConnectedDidChange_IsConnected"];
+    BOOL isConnected = connected ? connected.boolValue : YES;
+    CPWiFiHandleCarPlayConnected(isConnected);
+}
+
+// Fallback detection: SpringBoard exposes the live CarPlay session through
+// AVExternalDevice. Poll it so the auto-join triggers even when the
+// notification above doesn't reach SpringBoard on a given iOS version.
+static BOOL CPIsCarPlayCurrentlyConnected(void) {
+    @try {
+        Class cls = NSClassFromString(@"AVExternalDevice");
+        if (cls && [cls respondsToSelector:@selector(currentCarPlayExternalDevice)]) {
+            id device = [cls performSelector:@selector(currentCarPlayExternalDevice)];
+            return device != nil;
+        }
+    } @catch (NSException *e) {}
+    return NO;
+}
+
+static BOOL gCarPlayWasConnected = NO;
+
+static void CPWiFiPollCarPlay(void) {
+    @autoreleasepool {
+        BOOL now = CPIsCarPlayCurrentlyConnected();
+        if (now && !gCarPlayWasConnected)
+            CPWiFiHandleCarPlayConnected(YES);
+        gCarPlayWasConnected = now;
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1792,19 +1962,9 @@ static id CPGetCarplayCADisplay(void) {
 %ctor {
     CPPrefsRegisterDefaults(@{
         kEnabled: @YES,
-        kDimming: @0,
-        kRows: @3, kColumns: @5, kIconSize: @40,
-        kTop_inset: @30, kBottom_inset: @(-30), kLeft_inset: @20, kRight_inset: @20,
-        kHideLabel: @YES, kHideLabelback: @YES, kDots: @YES, klblColor: @"FFFFFF",
-        kStatusBar: @YES, kOrienation: @0, kDateFormat: @"EE,MMM d", kLocation: @"en_US_POSIX",
-        kFontSize: @8, kPosDate: @30, kPosWeather: @40, kBattery: @180,
-        kWallEnabled: @NO, kWallpaperMotion: @NO, kInterval: @5,
-        kAPI_Music: @YES, kAPI_Battey: @YES, kAPI_System: @YES, kAPI_Weather: @YES,
-        kAPI_CarPlay: @YES, kAPI_Statusbar: @YES,
-        kFull_size: @30, kFullBtn_x: @14, kFullBtn_y: @14,
-        kRemoveSplash: @NO,
         kDashboardCustom: @NO, kDashLeft: @"", kDashRightTop: @"", kDashRightBottom: @"",
         kAnyAppCarPlay: @YES,
+        kWifiAutoJoin: @NO, kWifiSSID: @"", kWifiPassword: @"",
     });
 
     // Split-screen dashboard customization (CarPlayApp process; no-op elsewhere)
@@ -1822,6 +1982,20 @@ static id CPGetCarplayCADisplay(void) {
             NSString *identifier = note.userInfo[@"identifier"];
             if (identifier.length) [[CarPlayPlusHostedWindow shared] presentAppWithBundleID:identifier];
         }];
+
+        // Auto-join the configured Wi-Fi hotspot when CarPlay connects.
+        [[NSNotificationCenter defaultCenter]
+            addObserverForName:@"CarPlayIsConnectedDidChange"
+                        object:nil queue:[NSOperationQueue mainQueue]
+                    usingBlock:^(NSNotification *note) {
+            OnCarPlayConnectForWiFi(note);
+        }];
+
+        // Fallback detector: poll AVExternalDevice so the auto-join also fires
+        // on iOS builds where the notification never reaches SpringBoard.
+        [NSTimer scheduledTimerWithTimeInterval:10.0 repeats:YES block:^(NSTimer *timer) {
+            CPWiFiPollCarPlay();
+        }];
     }
 
     // BKS screen-blank hook
@@ -1833,21 +2007,8 @@ static id CPGetCarplayCADisplay(void) {
                            (void **)&orig_BKSDisplayServicesSetScreenBlanked);
     }
 
-    %init(CarPlayPlusLayout);
-    %init(CarPlayPlusWallpaper);
-    %init(CarPlayPlusStatusBar);
-    %init(CarPlayPlusFullscreen);
-    %init(CarPlayPlusWidgets);
-
-    NSNotificationCenter *nc = [NSNotificationCenter defaultCenter];
-    [nc addObserverForName:@"CarPlayIsConnectedDidChange" object:nil queue:nil
-          usingBlock:^(NSNotification *note) { OnCarPlayConnect(note); }];
-    [nc addObserverForName:kIconLayoutChanged object:nil queue:nil
-          usingBlock:^(NSNotification *note) { OnIconLayoutChanged(note); }];
-    [nc addObserverForName:kChangedImg object:nil queue:nil usingBlock:^(NSNotification *note) {
-        UIWindow *w = [UIApplication sharedApplication].keyWindow;
-        if (w) [[CarPlayPlusWallpaper shared] applyToWindow:w];
-    }];
+    // Preferences watcher → re-apply the dashboard configuration whenever the
+    // user changes a setting in the Settings app.
     CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(),
                                     NULL,
                                     (CFNotificationCallback)OnPrefsChanged,

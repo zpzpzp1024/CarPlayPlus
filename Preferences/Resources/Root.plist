@@ -8,9 +8,9 @@
 			<key>cell</key>
 			<string>PSGroupCell</string>
 			<key>label</key>
-			<string>启用 / 禁用</string>
+			<string>总开关</string>
 			<key>footerText</key>
-			<string>CarPlayPlus — Airaw CarPlay 插件的现代化重制版。</string>
+			<string>CarPlayPlus — 分屏自定义 + 任意 App 上 CarPlay（重制精简版）。</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -24,67 +24,12 @@
 			<key>label</key>
 			<string>启用</string>
 		</dict>
+
 		<dict>
 			<key>cell</key>
 			<string>PSGroupCell</string>
 			<key>label</key>
-			<string>CarPlay 个性化</string>
-		</dict>
-		<dict>
-			<key>cell</key>
-			<string>PSLinkCell</string>
-			<key>detail</key>
-			<string>CarPlayPlusLayoutController</string>
-			<key>label</key>
-			<string>图标布局</string>
-		</dict>
-		<dict>
-			<key>cell</key>
-			<string>PSLinkCell</string>
-			<key>detail</key>
-			<string>CarPlayPlusWallpaperController</string>
-			<key>label</key>
-			<string>车载壁纸</string>
-		</dict>
-		<dict>
-			<key>cell</key>
-			<string>PSLinkCell</string>
-			<key>detail</key>
-			<string>CarPlayPlusSlideshowController</string>
-			<key>label</key>
-			<string>壁纸幻灯片</string>
-		</dict>
-		<dict>
-			<key>cell</key>
-			<string>PSLinkCell</string>
-			<key>detail</key>
-			<string>CarPlayPlusStatusBarController</string>
-			<key>label</key>
-			<string>状态栏</string>
-		</dict>
-		<dict>
-			<key>cell</key>
-			<string>PSLinkCell</string>
-			<key>detail</key>
-			<string>CarPlayPlusStatusBarColorController</string>
-			<key>label</key>
-			<string>状态栏颜色</string>
-		</dict>
-		<dict>
-			<key>cell</key>
-			<string>PSLinkCell</string>
-			<key>detail</key>
-			<string>CarPlayPlusWidgetsController</string>
-			<key>label</key>
-			<string>小组件</string>
-		</dict>
-		<dict>
-			<key>cell</key>
-			<string>PSLinkCell</string>
-			<key>detail</key>
-			<string>CarPlayPlusOtherController</string>
-			<key>label</key>
-			<string>其他功能</string>
+			<string>CarPlay 功能</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -96,17 +41,18 @@
 		</dict>
 		<dict>
 			<key>cell</key>
+			<string>PSLinkCell</string>
+			<key>detail</key>
+			<string>CarPlayPlusWiFiController</string>
+			<key>label</key>
+			<string>WiFi 自动连接</string>
+		</dict>
+
+		<dict>
+			<key>cell</key>
 			<string>PSGroupCell</string>
 			<key>label</key>
 			<string>维护</string>
-		</dict>
-		<dict>
-			<key>cell</key>
-			<string>PSLinkCell</string>
-			<key>detail</key>
-			<string>CarPlayPlusBackupController</string>
-			<key>label</key>
-			<string>备份 / 恢复</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -118,6 +64,15 @@
 			<key>label</key>
 			<string>重启 CarPlay</string>
 		</dict>
+
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
+			<string>关于</string>
+			<key>footerText</key>
+			<string>如果设置界面闪退，崩溃日志将写入 /var/mobile/Documents/carplayplus_crash.log，可用 Filza 或 SSH 查看后反馈。</string>
+		</dict>
 		<dict>
 			<key>cell</key>
 			<string>PSTitleValueCell</string>
@@ -126,29 +81,7 @@
 			<key>label</key>
 			<string>版本</string>
 			<key>value</key>
-			<string>1.0.0（iOS 14+）</string>
-		</dict>
-		<dict>
-			<key>cell</key>
-			<string>PSGroupCell</string>
-			<key>label</key>
-			<string>关于</string>
-		</dict>
-		<dict>
-			<key>cell</key>
-			<string>PSLinkCell</string>
-			<key>detail</key>
-			<string>CarPlayPlusSpecialThanksController</string>
-			<key>label</key>
-			<string>特别鸣谢</string>
-		</dict>
-		<dict>
-			<key>cell</key>
-			<string>PSGroupCell</string>
-			<key>label</key>
-			<string>调试</string>
-			<key>footerText</key>
-			<string>如果设置界面闪退，崩溃日志将写入 /var/mobile/Documents/carplayplus_crash.log，可用 Filza 或 SSH 查看后反馈。</string>
+			<string>1.2.0（iOS 14+）</string>
 		</dict>
 	</array>
 	<key>title</key>
