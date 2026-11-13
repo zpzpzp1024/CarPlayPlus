@@ -646,14 +646,20 @@ static void CPJoinWiFiNetwork(NSString *ssid, NSString *password) {
         Class cfgClass = NSClassFromString(@"NEHotspotConfiguration");
         Class mgrClass = NSClassFromString(@"NEHotspotConfigurationManager");
         if (cfgClass && mgrClass) {
-            id cfg = [[(id)cfgClass alloc] initWithSSID:ssid
-                                            passphrase:password.length ? password : nil
-                                                isWEP:NO];
-            if (cfg) {
-                id manager = [(id)mgrClass sharedManager];
-                [manager applyConfiguration:cfg completionHandler:^(NSError *error) {
-                    CPWiFiLog(@"NEHotspot apply \"%@\" error=%@", ssid, error);
-                }];
+            SEL initSel = NSSelectorFromString(@"initWithSSID:passphrase:isWEP:");
+            id instance = ((id (*)(id, SEL))objc_msgSend)((id)cfgClass, NSSelectorFromString(@"alloc"));
+            if (instance) {
+                id cfg = ((id (*)(id, SEL, id, id, BOOL))objc_msgSend)(
+                    instance, initSel, ssid, password.length ? password : nil, NO);
+                if (!cfg) return;
+                id manager = ((id (*)(id, SEL))objc_msgSend)((id)mgrClass,
+                                                             NSSelectorFromString(@"sharedManager"));
+                if (manager) {
+                    SEL applySel = NSSelectorFromString(@"applyConfiguration:completionHandler:");
+                    ((void (*)(id, SEL, id, id))objc_msgSend)(manager, applySel, cfg, ^(NSError *error) {
+                        CPWiFiLog(@"NEHotspot apply \"%@\" error=%@", ssid, error);
+                    });
+                }
             }
         }
     } @catch (NSException *e) {
