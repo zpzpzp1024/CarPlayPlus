@@ -646,11 +646,11 @@ static void CPJoinWiFiNetwork(NSString *ssid, NSString *password) {
         Class cfgClass = NSClassFromString(@"NEHotspotConfiguration");
         Class mgrClass = NSClassFromString(@"NEHotspotConfigurationManager");
         if (cfgClass && mgrClass) {
-            id cfg = [[cfgClass alloc] initWithSSID:ssid
-                                         passphrase:password.length ? password : nil
-                                             isWEP:NO];
+            id cfg = [[(id)cfgClass alloc] initWithSSID:ssid
+                                            passphrase:password.length ? password : nil
+                                                isWEP:NO];
             if (cfg) {
-                id manager = [mgrClass sharedManager];
+                id manager = [(id)mgrClass sharedManager];
                 [manager applyConfiguration:cfg completionHandler:^(NSError *error) {
                     CPWiFiLog(@"NEHotspot apply \"%@\" error=%@", ssid, error);
                 }];
